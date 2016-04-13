@@ -1,0 +1,11 @@
+##Type: Reactive
+##Nuclei: Carbon
+##Particle: piP
+##Reference: D. Ashery, et al. True absorption and scattering of pions on nuclei. Phys. Rev., Vol. C23,p. 2173, 1981
+##Mom xsec error
+175.656 144 15
+224.444 204 23
+270.361 240 28
+314.666 202 29
+357.959 142 22
+432.198 109 16
