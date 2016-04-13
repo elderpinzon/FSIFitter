@@ -1,0 +1,11 @@
+##Type: Reactive
+##Nuclei: Carbon
+##Particle: piP
+##Reference: B. W. Allayrdice, et al. Pion Reaction Cross Sections and Nuclear Sizes. Allardyce Nucl Phys A 209 1 -51, 1973
+##Mom xsec error
+710 263 3
+840 246 3
+1000 257 2
+1360 248 3
+1580 243 3
+2000 224 2
