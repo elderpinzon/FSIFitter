@@ -1,0 +1,6 @@
+DOT_IMAGE_FORMAT     = png
+ENABLE_PREPROCESSING = NO
+IMAGE_PATH           = $(FSIFITTERROOT)/doc
+GENERATE_TREEVIEW    = YES
+FILE_PATTERNS          = *.dox *.cxx *.hxx
+RECURSIVE            = YES
