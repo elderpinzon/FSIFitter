@@ -1,9 +1,0 @@
-FSI fit for NEUT v 2016
-
-COMPILING
-To compile run 'make clean; make'
-
-RUNNING
-source setup.sh
-./PiScat2016.exe [-i inputMC] [-g inputGrid] [-o outputFitResult]
-If no options are specified the grid will be built using the data points and the default MC scan
