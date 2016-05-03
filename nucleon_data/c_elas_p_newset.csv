@@ -1,0 +1,13 @@
+##Type: Elastic
+##Nuclei: Carbon
+##Particle: p
+##Reference: newset
+##Mom xsec error
+868 127 0
+1281 102 16
+1534 97 32
+1583 95 31
+1580 94 8
+1658 94 15
+1696 93 15
+2994 65 6
