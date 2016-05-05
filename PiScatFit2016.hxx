@@ -18,7 +18,7 @@
 
 
 #include "ExternalDataSet.hxx"
-#include "FSIParameterScan.h"
+#include "FSIParameterScan.hxx"
 #include "FSIFitFCN.hxx"
 #include "FSIChi2Grid.hxx"
 
