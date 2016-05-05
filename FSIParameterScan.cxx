@@ -7,7 +7,7 @@
 //***********************************************************************************
 
 #define FSIParameterScan_cxx
-#include "FSIParameterScan.h"
+#include "FSIParameterScan.hxx"
 #include <TH2.h>
 #include <TStyle.h>
 #include <TCanvas.h>

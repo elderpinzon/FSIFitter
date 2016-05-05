@@ -12,7 +12,7 @@
 #include "TMatrixDSym.h"
 #include "TDecompChol.h"
 
-#include "FSIParameterScan.h"
+#include "FSIParameterScan.hxx"
 
 class ExternalDataSet{
   
