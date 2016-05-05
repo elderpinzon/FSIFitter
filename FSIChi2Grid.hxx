@@ -15,7 +15,7 @@
 //#include <TMultiDimFit.h>
 #include <TMultiDimFit.h>
 
-#include "FSIParameterScan.h"
+#include "FSIParameterScan.hxx"
 #include "ExternalDataSet.hxx"
 
 class FSIChi2Grid{

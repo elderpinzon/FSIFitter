@@ -1,5 +1,5 @@
-#ifndef FSIParameterScan_h
-#define FSIParameterScan_h
+#ifndef FSIParameterScan_hxx
+#define FSIParameterScan_hxx
 
 #include <TROOT.h>
 #include <TChain.h>
