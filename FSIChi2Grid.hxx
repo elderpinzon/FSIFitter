@@ -1,10 +1,18 @@
-#ifndef PIONCHI2GRID_HXX
-#define PIONCHI2GRID_HXX
+#ifndef FSICHI2GRID_HXX
+#define FSICHI2GRID_HXX
 
 #include <iostream>
 #include <string>
 #include <cstdlib>
 #include <sstream>
+#include <iomanip>
+#include <stdlib.h>
+#include <vector>
+
+// Octave libraries
+#include <octave/oct.h>
+#include <octave/octave.h>
+#include <octave/parse.h>
 
 #include "TTree.h"
 #include "TVector.h"
@@ -17,6 +25,9 @@
 
 #include "FSIParameterScan.hxx"
 #include "ExternalDataSet.hxx"
+
+// Temporarily setting grid size here - need better way of doing it!
+const int nFSIpars = 3;
 
 class FSIChi2Grid{
   
@@ -38,6 +49,11 @@ private:
   // The TMultiDimFit object
   TMultiDimFit *multifit;
 
+  // Octave objects
+  Matrix *x_vec[nFSIpars];  // Axes points to build mesh
+  Array<double> *v_vec; // Mesh of chi^2
+
+
 public:
 
   FSIChi2Grid(){};
@@ -52,6 +68,8 @@ public:
   void InterpolateFiniteGrid(bool kUseInputGrid);
   void UseExistingGrid();
   double GetInterpolatedGridPoint(const std::vector<double> &x);
+  double GetSplinedGridPoint(const std::vector<double> &x);
+  
 };
 
 #endif  
