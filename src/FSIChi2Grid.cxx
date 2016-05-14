@@ -262,53 +262,12 @@ void FSIChi2Grid::InterpolateFiniteGrid(bool kUseInputGrid){
 }
 
 //***********************************************************************************
-// Build resulting function from the results of the TMultiDim object
-// Most of this code was copied from TMultiDimFit::MakeRealCode()
+// Evaluate interpolated function at required point in n-dimensional space
 //***********************************************************************************
 double FSIChi2Grid::GetInterpolatedGridPoint(const std::vector<double> &x){
-  
-  // Grab all necessary pieces
-  Int_t gNCoefficients = multifit->GetNCoefficients();
-  Int_t gNVariables = multifit->GetNVariables();
-  const Int_t *gPower = multifit->GetPowers();
-  const Int_t *gPowerIndex = multifit->GetPowerIndex();
-  const TVectorD *gCoefficient = multifit->GetCoefficients();
-  const TVectorD *gXMax = multifit->GetMaxVariables();
-  const TVectorD *gXMin = multifit->GetMinVariables();
-  const double gDMean =  multifit->GetMeanQuantity();
-  double returnValue = gDMean;
-  
-  // Build the polynomial and evaluate it
-  int i = 0, j = 0, k = 0;
-  for (i = 0; i < gNCoefficients ; i++) {
-    // Evaluate the ith term in the expansion
-    double term = (*gCoefficient)[i];
-    for (j = 0; j < gNVariables; j++) {
-      // Evaluate the polynomial in the jth variable.
-      int power = gPower[gPowerIndex[i] * gNVariables + j];
-      double p1 = 1, p2 = 0, p3 = 0, r = 0;
-      double v =  1 + 2. / ((*gXMax)[j] - (*gXMin)[j]) * (x[j] - (*gXMax)[j]);
-      // what is the power to use!
-      switch(power) {
-      case 1: r = 1; break;
-      case 2: r = v; break;
-      default:
-	p2 = v;
-	for (k = 3; k <= power; k++) {
-	  p3 = p2 * v;
-	  p1 = p2; p2 = p3;
-	}
-	r = p3;
-      }
-      // multiply this term by the poly in the jth var
-      term *= r;
-    }
-    // Add this term to the final result
-    returnValue += term;
-  }
-  
-  return returnValue;
-  
+
+  return FSIFitterUtils::BuildInterpolatedFunctionAndEvaluate(multifit,x);
+
 }
 
 //***********************************************************************************
