@@ -25,6 +25,7 @@
 
 #include "FSIParameterScan.hxx"
 #include "ExternalDataSet.hxx"
+#include "FSIFitterUtils.hxx"
 
 // Temporarily setting grid size here - need better way of doing it!
 const int nFSIpars = 3;
