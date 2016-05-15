@@ -14,8 +14,8 @@ OCT_INCS=$(shell mkoctfile -p ALL_CXXFLAGS)
 OCT_LIB_DIR=$(shell mkoctfile -p LFLAGS)
 OCT_LIBS=$(shell mkoctfile -p OCTAVE_LIBS)
 
-HEADERS=ExternalDataSet.hxx FSIFitFCN.hxx FSIParameterScan.hxx FSIChi2Grid.hxx
-SOURCES=ExternalDataSet.cxx FSIFitFCN.cxx FSIParameterScan.cxx FSIChi2Grid.cxx
+HEADERS=ExternalDataSet.hxx FSIFitFCN.hxx FSIParameterScan.hxx FSIChi2Grid.hxx FSIFitterUtils.hxx InterpolatedCrossSections.hxx
+SOURCES=ExternalDataSet.cxx FSIFitFCN.cxx FSIParameterScan.cxx FSIChi2Grid.cxx FSIFitterUtils.cxx InterpolatedCrossSections.cxx
 #DICT=dict.cc
 LIBPISCAT=libPiScat.so
 
