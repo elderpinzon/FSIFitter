@@ -15,8 +15,17 @@ InterpolatedCrossSections::InterpolatedCrossSections(std::string fFileName) : fi
   
 }
 
+InterpolatedCrossSections::~InterpolatedCrossSections(){
+
+  for(int i = 0; i<5; i++)
+    delete xsecmultidimfit[i];
+ 
+}
+
 void InterpolatedCrossSections::RunMultiDimFitInterpolations(){
 
+  std::vector< std::string > xsecs = {"xqe","xabs","xcx","xdcx","xhadr"};
+  
   // Load results from FSI parameter scan
   FSIParameterScan aFSIParameterScan(filename);
   const Int_t nentries = aFSIParameterScan.fChain->GetEntries();
