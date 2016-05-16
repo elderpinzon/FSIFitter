@@ -18,7 +18,7 @@ ExternalDataSet::ExternalDataSet(std::string fFileName) : FileName(fFileName)
   Initialize();
 }
 
-ExternalDataSet& ExternalDataSet::operator=(const ExternalDataSet &aDataSet ){}
+//ExternalDataSet& ExternalDataSet::operator=(const ExternalDataSet &aDataSet ){}
 
 //***********************************************************************************
 // Parse info about the data set from the filename
@@ -239,7 +239,7 @@ double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, 
     std::cout << "ExternalDataSet::CalculateChiSquare(): Warning did not find this parameter set!" 
 	      << "\n ... Leaving now. " << std::endl;
     PrintParameterSet(this_qe,this_abs,this_cx);
-    exit(-1);
+    std::exit(-1);
   }
 
   // Check that the Data and MC Vectors match in size
@@ -247,7 +247,7 @@ double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, 
   if (nbins != vec_MC_Xsec.GetNoElements()) {
     std::cout << "Error ExternalDataSet::CalculateChiSquare: Number of data bins (" <<
       nbins << ") != mc bins (" << vec_MC_Xsec.GetNoElements() << ")" << std::endl;
-  std:exit (1);
+    std::exit (-1);
   }
 
   // Need a new nDataPoints in case some MC point is missing
