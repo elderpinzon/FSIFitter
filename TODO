@@ -1,0 +1,9 @@
+## TODO items:
+
+- Read in settings to be used by fitter from a parameter file i.e. (pion/nucleon fit, which parameters to fit, size of grid and range of fit, data sets to be used, target nuclei to be used, TMultiDimFit/Octave fit, How many throws from the covariance?, what to plot?)
+
+- Obtain error envelopes by throwing from covariance matrix obtained from Minuit2 (almost ready)
+
+- Add other generator predictions (GENIE, Geant, etc.) so we can make comparison plots easily. A nice way of doing it would be a "ModelPrediction" class that has the following methods: SetFile("rootfile"), SetName("GENIE"), SetNuclei("A"), DrawPrediction(), etc. so it can be added to other plots produced by other routines
+
+- Script to turn the list of data sets to be used into a nicely formatted LaTex table
