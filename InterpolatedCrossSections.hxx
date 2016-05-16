@@ -7,8 +7,6 @@
 #include "FSIParameterScan.hxx"
 #include "FSIFitterUtils.hxx"
 
-std::vector< std::string > xsecs = {"xqe","xabs","xcx","xdcx","xhadr"};
-
 class InterpolatedCrossSections{
 
 private:
@@ -21,6 +19,7 @@ public:
 
   InterpolatedCrossSections();
   InterpolatedCrossSections(std::string fFileName);
+  ~InterpolatedCrossSections();
   void RunMultiDimFitInterpolations();
   double GetInterpolatedCrossSection(int xs, const std::vector<double> &x);
 
