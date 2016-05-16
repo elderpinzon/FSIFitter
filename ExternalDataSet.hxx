@@ -39,7 +39,7 @@ public:
 
   ExternalDataSet();
   ExternalDataSet(std::string fFileName);
-  ExternalDataSet& operator=(const ExternalDataSet&);
+  //ExternalDataSet& operator=(const ExternalDataSet&);
   void ParseDataSetName();
   int IntrNameToInt(std::string fIntrType);
   std::string GetSetName();

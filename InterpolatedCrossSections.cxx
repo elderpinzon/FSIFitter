@@ -44,6 +44,8 @@ void InterpolatedCrossSections::RunMultiDimFitInterpolations(){
     Long64_t ientry = aFSIParameterScan.LoadTree(jentry);
     if (ientry < 0) break;
 
+    aFSIParameterScan.GetEntry(jentry);
+
     fsi_pars[0] = aFSIParameterScan.mom;
     fsi_pars[1] = aFSIParameterScan.qe;
     fsi_pars[2] = aFSIParameterScan.abs;
