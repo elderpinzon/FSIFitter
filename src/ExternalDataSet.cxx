@@ -12,7 +12,7 @@
 // Definition of a ExternalDataSet object
 // Defined from the name of the csv data file
 //***********************************************************************************
-ExternalDataSet::ExternalDataSet(std::string fFileName) : FileName(fFileName)
+ExternalDataSet::ExternalDataSet(TString fFileName) : FileName(fFileName)
 {
   // This will load the data points into a TGraphErrors, TVectors and a TMatrix
   Initialize();
@@ -35,14 +35,17 @@ void ExternalDataSet::ParseDataSetName(){
   }
   
   Nuclei = parser[0];
+  intrTypeString = parser[1];
   intrType = IntrNameToInt(parser[1]);
   pionType = parser[2];
+  size_t lastindex = parser[3].find_last_of(".");
+  SetName = parser[3].substr(0, lastindex); 
   SetName = parser[3];
 
   std::cout << "\n%%%%% Building ExternalDataSet: "
 	    << "\nSetName: "   << SetName
 	    << "\nNuclei: "    << Nuclei
-	    << "\nIntr Type: " << intrType
+	    << "\nIntr Type: " << intrTypeString
 	    << "\nPion Type: " << pionType
 	    <<std::endl;
   
@@ -51,7 +54,7 @@ void ExternalDataSet::ParseDataSetName(){
 //***********************************************************************************
 // Convert interaction type to integer for easiness later on
 //***********************************************************************************
-int ExternalDataSet::IntrNameToInt(std::string fIntrType){
+int ExternalDataSet::IntrNameToInt(TString fIntrType){
   
   int fIntrTypeNumber = -1;
   
@@ -59,18 +62,9 @@ int ExternalDataSet::IntrNameToInt(std::string fIntrType){
   if(fIntrType == "inel")   fIntrTypeNumber = 2;
   if(fIntrType == "abs")    fIntrTypeNumber = 3;
   if(fIntrType == "cx")     fIntrTypeNumber = 4;
-  if(fIntrType == "dcx")    fIntrTypeNumber = 5;
-  if(fIntrType == "abscx")  fIntrTypeNumber = 6;
+  //if(fIntrType == "dcx")    fIntrTypeNumber = 5;
+  if(fIntrType == "abscx")  fIntrTypeNumber = 5;
   return fIntrTypeNumber;
-
-}
-
-//***********************************************************************************
-// Just return the data set name
-//***********************************************************************************
-std::string ExternalDataSet::GetSetName(){
-  
-  return SetName;
 
 }
 
@@ -163,15 +157,6 @@ void ExternalDataSet::BuildDataDiagonalMatrices(){
   std::cout << "Built covariance matrices for this dataset" << std::endl;
 
 }
-
-//***********************************************************************************
-// Just return the number of data points
-//***********************************************************************************
-int ExternalDataSet::GetNumberOfDataPoints(){
-  
-  return nDataPoints;
-
-}   
 
 //***********************************************************************************
 // Calculate the chisquare for this data set for a particular set of parameters
@@ -293,19 +278,6 @@ double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, 
 }
 
 //***********************************************************************************
-// Just return the calculate chi square
-//***********************************************************************************
-double ExternalDataSet::GetChiSquare(){
-  
-  if(fDataSetChiSquare == -9999){
-    std::cout << "ExternalDataSet::GetChiSquare ERROR: Haven't computed chi-square yet!" << std::endl;
-    exit(-1);
-  }
-  return fDataSetChiSquare;
-
-}
-
-//***********************************************************************************
 // Print the parameter set. Should make something more general
 //***********************************************************************************
 void ExternalDataSet::PrintParameterSet(double f_qe, double f_abs, double f_cx){
@@ -354,7 +326,7 @@ void ExternalDataSet::FillMiniTreeFromMCScan(){
 	// If CX data point
 	if(intrType == 4) specific_xsec = aFSIParameterScan.xcx;
 	// If ABS+CX data point
-	if(intrType == 6) specific_xsec = (aFSIParameterScan.xabs + aFSIParameterScan.xcx);
+	if(intrType == 5) specific_xsec = (aFSIParameterScan.xabs + aFSIParameterScan.xcx);
 	
 	MiniMCScan->Fill();
 	
