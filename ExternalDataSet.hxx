@@ -19,11 +19,12 @@ class ExternalDataSet{
 private:
   
   std::string FileName;
-  std::string SetName;
-  std::string Nuclei;
-  std::string pionType;
-  int intrType;
-  int nDataPoints;
+  TString SetName;
+  TString Nuclei;
+  TString pionType;
+  TString intrTypeString;
+  Int_t intrType;
+  Int_t nDataPoints;
   TTree *MiniMCScan; //A TTree with only the MC scans relevant for this data set
   TVectorD vec_data_Mom;
   TVectorD vec_data_Xsec;
@@ -38,21 +39,26 @@ private:
 public:
 
   ExternalDataSet();
-  ExternalDataSet(std::string fFileName);
+  ExternalDataSet(TString fFileName);
   //ExternalDataSet& operator=(const ExternalDataSet&);
+  void Initialize(); 
   void ParseDataSetName();
-  int IntrNameToInt(std::string fIntrType);
-  std::string GetSetName();
   void LoadData(); //Load data into TGraph and TVectors
   void BuildDataDiagonalMatrices(); //Only for non-DUET data
-  void Initialize(); 
-  int GetNumberOfDataPoints();
+  int IntrNameToInt(TString fIntrType);  
+  TGraphErrors* GetTGraph(){ return fDataPointsGraph;};
+  TVectorD GetMomVector(){ return vec_data_Mom;};
+  Int_t GetIntrType(){ return intrType;};
+  TString GetIntrTypeString(){ return intrTypeString;};
+  TString GetPionType(){ return pionType;};
+  TString GetNucleus(){ return Nuclei;};
+  TString GetSetName(){ return SetName;};
+  Int_t GetNumberOfDataPoints(){ return nDataPoints;};
   double CalculateChiSquare(Double_t this_abs, Double_t this_cx, Double_t this_qe, FSIParameterScan &aFSIParameterScan);
   double CalculateChiSquare(Double_t this_abs, Double_t this_cx, Double_t this_qe);
-  double GetChiSquare();
+  double GetChiSquare(){ return fDataSetChiSquare;};
   void PrintParameterSet(double f_qe, double f_abs, double f_cx);
   void FillMiniTreeFromMCScan();
-  
 };
 
 #endif  
