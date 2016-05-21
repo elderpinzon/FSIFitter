@@ -68,6 +68,8 @@ void InterpolatedCrossSections::RunMultiDimFitInterpolations(){
 
   }
 
+  TFile *fout = new TFile("output/ResultCrossSectionInterpolation.root","RECREATE");
+  
   for(int i = 0; i<5; i++){
 
     std::cout << "Interpolating xsec = " << xsecs[i] << std::endl;    
@@ -86,7 +88,11 @@ void InterpolatedCrossSections::RunMultiDimFitInterpolations(){
     //xsecmultidimfit[i]->MakeMethod(Form("%s",xsecs[i].c_str()));
     //std::cout << "Chi2 " << xsecs[i] << ": " << xsecmultidimfit[i]->GetChi2() << std::endl;
 
+    xsecmultidimfit[i]->Write(Form("interp_%s",xsecs[i].c_str()));
   }
+
+  fout->Close();
+  
 }
 
 double InterpolatedCrossSections::GetInterpolatedCrossSection(int xs_index, const std::vector<double> &x){
