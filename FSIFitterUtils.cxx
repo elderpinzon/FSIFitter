@@ -49,3 +49,86 @@ double FSIFitterUtils::BuildInterpolatedFunctionAndEvaluate(TMultiDimFit *aTMult
   return returnValue;
 
 }
+
+//***********************************************************************************
+// Merges a collection of TGraphErrors into a single ordered one. Useful for plotting
+// TGraphErrors::Merge() seems to lose the error info when merging
+//***********************************************************************************
+TGraphErrors* FSIFitterUtils::MergeGraphs(TCollection* li){
+
+  TGraphErrors *merged = new TGraphErrors();
+  TIter next(li);
+
+  while (TObject* o = next()) {
+
+    TGraph *g = dynamic_cast<TGraph*>(o);
+    if (!g) {
+      std::cout << "Merge Cannot merge - an object which doesn't inherit from TGraph found in the list" << std::endl;
+      exit(-1);
+    }
+
+    int n0 = merged->GetN();
+    int n1 = n0+g->GetN();
+
+    merged->Set(n1);
+    Double_t * x = g->GetX();
+    Double_t * y = g->GetY();
+    Double_t * ex = g->GetEX();
+    Double_t * ey = g->GetEY();
+    for (Int_t i = 0 ; i < g->GetN(); i++) {
+      //std::cout << "x[i] " << x[i] << "ex[i]: " << ex[i] << std::endl;
+      merged->SetPoint(n0+i, x[i], y[i]);
+      merged->SetPointError(n0+i, ex[i], ey[i]);
+    }
+  }
+  //std::cout << merged->GetN() << std::endl;
+  return merged;
+}
+
+//***********************************************************************************
+// Joins two TGraphErrors back to back. Useful for plotting error envelopes
+//***********************************************************************************
+TGraphErrors* FSIFitterUtils::MergeGraphsIntoEnvelope(TGraphErrors *gr_min, TGraphErrors *gr_max){
+
+  // Fill the envelope
+  if(gr_min->GetN() != gr_max->GetN()){
+    std::cout << "gr_min and gr_max have different binning!" << std::endl;
+    std::exit(-1);
+  }
+
+  TGraphErrors *gr_shade = new TGraphErrors(2*gr_min->GetN());
+
+  for(int ipoint=0; ipoint<gr_min->GetN(); ipoint++){
+    
+    double x_min,y_min,x_max,y_max;
+    //Get min and max envelopes
+    gr_min->GetPoint(ipoint,x_min,y_min);
+    gr_max->GetPoint(gr_min->GetN()-ipoint-1,x_max,y_max);
+    
+    gr_shade->SetPoint(ipoint,x_min,y_min);
+    gr_shade->SetPoint(gr_min->GetN()+ipoint,x_max,y_max);
+    
+  }
+  
+  gr_shade->SetFillStyle(3013);
+  gr_shade->SetFillColor(16);
+  return gr_shade;
+
+}
+
+//***********************************************************************************
+// Turns a set of TMultiDimFits into a single TF1
+//***********************************************************************************
+double TF1FromMultiDimFits::operator()(double *x, double *) const{
+
+  std::vector<double> tmp;
+  tmp.push_back(x[0]);
+  tmp.insert(tmp.end(), fFSIPars.begin(), fFSIPars.end());
+  
+  double calc = 0;
+  for(int i = 0; i < (int)fVectorMultiDimFits->size(); i++)
+    calc += FSIFitterUtils::BuildInterpolatedFunctionAndEvaluate(fVectorMultiDimFits->at(i),tmp); 
+  
+  return calc;
+
+}
