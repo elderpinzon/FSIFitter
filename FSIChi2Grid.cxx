@@ -65,14 +65,22 @@ void FSIChi2Grid::UseExistingGrid(){
 	      <<" to TMultiDimFit object"
 	      << std::endl;
     
+    // Convert back to indices (this is dumb)
+    int i_qe = (fqe-0.75)/0.05;
+    int i_abs = (fabs-1.0)/0.05;
+    int i_cx = (fcx-0.5)/0.05;
+
     // Add this set of parameters and its chisquare to the TMultiDim object
     Double_t fsi_pars[3];
     fsi_pars[0] = fqe;
     fsi_pars[1] = fabs;
     fsi_pars[2] = fcx;
     multifit->AddRow(fsi_pars,fchisquare);
-
+    (*v_vec)(i_qe,i_abs,i_cx) = fchisquare;
+    
   }
+
+  std::cout << "v_vec at the end: " << (*v_vec) << std::endl; 
 
   std::cout<< std::endl << "FSIChi2Grid::UseExisitingGrid()... done" << std::endl;
 
@@ -86,40 +94,6 @@ void FSIChi2Grid::BuildFiniteGrid(){
 
   std::cout << "Building finite chisquare grid" << std::endl;
   
-  // Grid initializations
-  double grid_step[nFSIpars] = {0.05,0.05,0.05};  
-  double grid_start[nFSIpars] = {0.75,1.0,0.5};
-  double grid_stops[nFSIpars] = {1.15,1.5,1.0};
-  int nSteps[nFSIpars] = {9,11,11};
-  
-  // Octave initializations
-  string_vector argv (2);
-  argv(0) = "FSIOctaveInterpolation";
-  argv(1) = "-q";
-  octave_main (2, argv.c_str_vec (), 1);
-
-  for (int idim=0; idim<nFSIpars; idim++){
-    
-    // Number of step grid points
-    //nSteps[idim] = (grid_stops[idim]-grid_start[idim])/grid_step[idim] + 1;
-
-    std::cout << "Building octave array of parameters: " << idim << " dim: " << nSteps[idim] << std::endl;
-
-    // Vector with FSI pars
-    x_vec[idim] = new Matrix(nSteps[idim],1);
-    for (octave_idx_type i = 0; i < nSteps[idim]; i++){
-      std::cout << grid_start[idim] + i*grid_step[idim] << std::endl;
-      (*x_vec[idim])(i,0) = grid_start[idim] + i*grid_step[idim];
-    }
-    std::cout << (*x_vec[idim]);
-  }
-  
-  //dim_vector dim_vec(nSteps,nSteps);       // Start off 2D
-  //dim_vec.resize(nFSIpars,nSteps);         // Then increase
-  dim_vector dim_vec(nSteps[0],nSteps[1],nSteps[2]);
-  v_vec = new Array<double>(dim_vec,999); // Initialize with large chi^2 in case some failed in filling tree
-  std::cout << "v_vec at the start: " << (*v_vec) << std::endl; 
-
   /*
   // Was trying to simplify loops but gave up :(
   int fsi_iter[nFSIpars];
@@ -221,6 +195,40 @@ TTree* FSIChi2Grid::GetFiniteGrid(){
 void FSIChi2Grid::InterpolateFiniteGrid(bool kUseInputGrid){
 
   std::cout << "\nBuilding interpolated chisquare grid" << std::endl;
+
+  // Grid initializations
+  double grid_step[nFSIpars] = {0.05,0.05,0.05};  
+  double grid_start[nFSIpars] = {0.75,1.0,0.5};
+  //double grid_stops[nFSIpars] = {1.15,1.5,1.0};
+  int nSteps[nFSIpars] = {9,11,11};
+  
+  // Octave initializations
+  string_vector argv (2);
+  argv(0) = "FSIOctaveInterpolation";
+  argv(1) = "-q";
+  octave_main (2, argv.c_str_vec (), 1);
+
+  for (int idim=0; idim<nFSIpars; idim++){
+    
+    // Number of step grid points
+    //nSteps[idim] = (grid_stops[idim]-grid_start[idim])/grid_step[idim] + 1;
+
+    std::cout << "Building octave array of parameters: " << idim << " dim: " << nSteps[idim] << std::endl;
+
+    // Vector with FSI pars
+    x_vec[idim] = new Matrix(nSteps[idim],1);
+    for (octave_idx_type i = 0; i < nSteps[idim]; i++){
+      std::cout << grid_start[idim] + i*grid_step[idim] << std::endl;
+      (*x_vec[idim])(i,0) = grid_start[idim] + i*grid_step[idim];
+    }
+    std::cout << (*x_vec[idim]);
+  }
+  
+  //dim_vector dim_vec(nSteps,nSteps);       // Start off 2D
+  //dim_vec.resize(nFSIpars,nSteps);         // Then increase
+  dim_vector dim_vec(nSteps[0],nSteps[1],nSteps[2]);
+  v_vec = new Array<double>(dim_vec,999); // Initialize with large chi^2 in case some failed in filling tree
+  std::cout << "v_vec at the start: " << (*v_vec) << std::endl; 
 
   // Create MultiDim fitter
   multifit = new TMultiDimFit(nFSIpars,TMultiDimFit::kMonomials,"kv");
