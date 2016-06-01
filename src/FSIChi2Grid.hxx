@@ -10,6 +10,7 @@
 #include <vector>
 
 // Octave libraries
+#include <octave/config.h>
 #include <octave/oct.h>
 #include <octave/octave.h>
 #include <octave/parse.h>
@@ -46,7 +47,9 @@ private:
   Double_t fabs;
   Double_t fcx;
   Double_t fchisquare;
-
+  Double_t freac;
+  Double_t felas;
+  Double_t ftot;
   // The TMultiDimFit object
   TMultiDimFit *multifit;
 
@@ -59,10 +62,10 @@ public:
 
   FSIChi2Grid(){};
   ~FSIChi2Grid(){};
-  FSIChi2Grid(ExternalDataSet SingleDataSet);
-  FSIChi2Grid(std::vector< ExternalDataSet::ExternalDataSet > AllDataSets);  
+  FSIChi2Grid(ExternalDataSet SingleDataSet, bool fnuclFit=0, bool fOctave=0, bool MultiDimFit=0);
+  FSIChi2Grid(std::vector< ExternalDataSet::ExternalDataSet > AllDataSets, bool fnuclFit=0, bool fOctave=0, bool MultiDimFit=0);  
   //FSIChi2Grid(std::vector< ExternalDataSet::ExternalDataSet > AllDataSets, FSIParameterScan &aFSIParameterScan);
-  FSIChi2Grid(TTree &BuiltGridTree);
+  FSIChi2Grid(TTree &BuiltGridTree, bool fnuclFit=0, bool fOctave=0, bool MultiDimFit=0);
   void ImportDataSets(ExternalDataSet AllDataSets);
   void BuildFiniteGrid();
   TTree* GetFiniteGrid();
@@ -71,6 +74,10 @@ public:
   double GetInterpolatedGridPoint(const std::vector<double> &x);
   double GetSplinedGridPoint(const std::vector<double> &x);
   
+  bool nuclFit;
+  bool kOctave;
+  bool kMultiDimFit;
+
 };
 
 #endif  

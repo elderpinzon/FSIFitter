@@ -12,8 +12,9 @@
 // Definition of a ExternalDataSet object
 // Defined from the name of the csv data file
 //***********************************************************************************
-ExternalDataSet::ExternalDataSet(TString fFileName) : FileName(fFileName)
+ExternalDataSet::ExternalDataSet(std::string fFileName, bool fnuclFit) : FileName(fFileName)
 {
+  nuclFit=fnuclFit;
   // This will load the data points into a TGraphErrors, TVectors and a TMatrix
   Initialize();
 }
@@ -37,17 +38,26 @@ void ExternalDataSet::ParseDataSetName(){
   Nuclei = parser[0];
   intrTypeString = parser[1];
   intrType = IntrNameToInt(parser[1]);
-  pionType = parser[2];
+  if (nuclFit) nucleonType = parser[2];
+  else pionType = parser[2];
   size_t lastindex = parser[3].find_last_of(".");
   SetName = parser[3].substr(0, lastindex); 
-  SetName = parser[3];
 
-  std::cout << "\n%%%%% Building ExternalDataSet: "
-	    << "\nSetName: "   << SetName
-	    << "\nNuclei: "    << Nuclei
-	    << "\nIntr Type: " << intrTypeString
-	    << "\nPion Type: " << pionType
-	    <<std::endl;
+  if (nuclFit){
+      std::cout << "\n%%%%% Building Nucleon ExternalDataSet: "
+      << "\nSetName: "   << SetName
+      << "\nNuclei: "    << Nuclei
+      << "\nIntr Type: " << intrType
+      << "\nPion Type: " << nucleonType
+      <<std::endl;
+    }else{
+      std::cout << "\n%%%%% Building Pion ExternalDataSet: "
+      << "\nSetName: "   << SetName
+      << "\nNuclei: "    << Nuclei
+      << "\nIntr Type: " << intrType
+      << "\nPion Type: " << pionType
+      <<std::endl;
+    }
   
 }
 
@@ -58,12 +68,19 @@ int ExternalDataSet::IntrNameToInt(TString fIntrType){
   
   int fIntrTypeNumber = -1;
   
-  if(fIntrType == "reac")   fIntrTypeNumber = 1;
-  if(fIntrType == "inel")   fIntrTypeNumber = 2;
-  if(fIntrType == "abs")    fIntrTypeNumber = 3;
-  if(fIntrType == "cx")     fIntrTypeNumber = 4;
-  //if(fIntrType == "dcx")    fIntrTypeNumber = 5;
-  if(fIntrType == "abscx")  fIntrTypeNumber = 5;
+  if (nuclFit){
+    if(fIntrType == "reac")   fIntrTypeNumber = 1;
+    if(fIntrType == "elas")   fIntrTypeNumber = 2;
+    if(fIntrType == "tot")    fIntrTypeNumber = 3;
+  }else{
+    if(fIntrType == "reac")   fIntrTypeNumber = 1;
+    if(fIntrType == "inel")   fIntrTypeNumber = 2;
+    if(fIntrType == "abs")    fIntrTypeNumber = 3;
+    if(fIntrType == "cx")     fIntrTypeNumber = 4;
+    if(fIntrType == "dcx")    fIntrTypeNumber = 5;
+    if(fIntrType == "abscx")  fIntrTypeNumber = 6;
+  }
+
   return fIntrTypeNumber;
 
 }
@@ -74,7 +91,9 @@ int ExternalDataSet::IntrNameToInt(TString fIntrType){
 void ExternalDataSet::LoadData(){
 
   // Load data from csv file
-  std::string FileNameWithDirectory = "data/" + FileName + ".csv";
+  std::string FileNameWithDirectory = "";
+  if (nuclFit) {FileNameWithDirectory = "nucleon_data/" + FileName + ".csv";}
+  else {FileNameWithDirectory = "data/" + FileName + ".csv";}
   fDataPointsGraph = new TGraphErrors(FileNameWithDirectory.c_str(),"%lf %lg %lg");
   
   // Set number of data points in this experiment
@@ -95,10 +114,10 @@ void ExternalDataSet::LoadData(){
     vec_data_Xsec[i] = fY;
     vec_data_Xsec_error[i] = fError;
     std::cout << i+1 << " " 
-	      << vec_data_Mom[i] << " " 
-	      << vec_data_Xsec[i] << " " 
-	      << vec_data_Xsec_error[i] 
-	      << std::endl;
+        << vec_data_Mom[i] << " " 
+        << vec_data_Xsec[i] << " " 
+        << vec_data_Xsec_error[i] 
+        << std::endl;
     
   }
 
@@ -122,16 +141,16 @@ void ExternalDataSet::BuildDataDiagonalMatrices(){
       
       // Make diagonals
       if (ix==iy) {
-	// 1 for correlation matrix
-	m_data_cor(ix,iy) = 1;
+  // 1 for correlation matrix
+  m_data_cor(ix,iy) = 1;
 
-	// Error^2 for covariance matrix
-	m_data_cov(ix,iy) = vec_data_Xsec_error(ix)*vec_data_Xsec_error(iy);
+  // Error^2 for covariance matrix
+  m_data_cov(ix,iy) = vec_data_Xsec_error(ix)*vec_data_Xsec_error(iy);
       }
 
       else {
-	m_data_cor(ix,iy) = 0;
-	m_data_cov(ix,iy) = 0;
+  m_data_cor(ix,iy) = 0;
+  m_data_cov(ix,iy) = 0;
       }
       
       m_data_cov_inv(ix,iy) = m_data_cov(ix,iy);
@@ -162,8 +181,10 @@ void ExternalDataSet::BuildDataDiagonalMatrices(){
 // Calculate the chisquare for this data set for a particular set of parameters
 //***********************************************************************************
 //double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, Double_t this_cx, FSIParameterScan &aFSIParameterScan){
-double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, Double_t this_cx){
 
+
+double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, Double_t this_cx){
+  // nuclFit=fnuclFit;
   bool VERBOSE_LEVEL = false;//true;
 
   if(VERBOSE_LEVEL){
@@ -177,15 +198,24 @@ double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, 
   // Loop through memory resident TTree
   const Int_t nentries = MiniMCScan->GetEntries();
 
-  double qe;
-  double abs;
-  double cx;
+  int const kSpf=0,kElf=1,kTotf=2;
+  int const kQe=0,kAbs=1,kCX=2;
+
+  double Facts[3];
+
+  if (nuclFit){
+    MiniMCScan->SetBranchAddress("spifact",&Facts[kSpf]);
+    MiniMCScan->SetBranchAddress("elafact",&Facts[kElf]);
+    MiniMCScan->SetBranchAddress("totfact",&Facts[kTotf]);
+  }else{
+    MiniMCScan->SetBranchAddress("qe",&Facts[kQe]);
+    MiniMCScan->SetBranchAddress("abs",&Facts[kAbs]);
+    MiniMCScan->SetBranchAddress("cx",&Facts[kCX]);
+  }
   double mom;
   double xsec_mc;
   
-  MiniMCScan->SetBranchAddress("qe",&qe);
-  MiniMCScan->SetBranchAddress("abs",&abs);
-  MiniMCScan->SetBranchAddress("cx",&cx);
+
   MiniMCScan->SetBranchAddress("mom",&mom);
   MiniMCScan->SetBranchAddress("specific_xsec",&xsec_mc);
 
@@ -198,23 +228,23 @@ double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, 
     MiniMCScan->GetEntry(jentry);
     
     // If a different set of parameters, move on
-    if(!(TMath::Abs(qe - this_qe) <0.01    && 
-	 TMath::Abs(abs - this_abs) < 0.01 && 
-	 TMath::Abs(cx - this_cx) < 0.01 )) continue;
-    
+    if(!(TMath::Abs(Facts[0] - this_qe) <0.01    && 
+         TMath::Abs(Facts[1] - this_abs) < 0.01 && 
+         TMath::Abs(Facts[2] - this_cx) < 0.01 )) continue;
+
     // Loop through data set points
     for (int point = 0; point < (int)vec_data_Mom.GetNoElements(); point++){
       
       // Compare momentum value from MC scan with momentum from this data set
       if(TMath::Abs(mom - vec_data_Mom[point])<0.05){
-	
-	vec_MC_Xsec[point] = xsec_mc;
-	
-	if(VERBOSE_LEVEL)
-	  std::cout << "mom: " << mom << " found vec_MC_Xsec: " << vec_MC_Xsec[point] << std::endl;
-	
-	// Flag parameter set as found
-	if(!foundParSet) foundParSet = true;
+  
+  vec_MC_Xsec[point] = xsec_mc;
+  
+  if(VERBOSE_LEVEL)
+    std::cout << "mom: " << mom << " found vec_MC_Xsec: " << vec_MC_Xsec[point] << std::endl;
+  
+  // Flag parameter set as found
+  if(!foundParSet) foundParSet = true;
       }
     }
   }
@@ -222,7 +252,7 @@ double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, 
   // Exit if a parameter set was not found. This should not happen
   if(!foundParSet){
     std::cout << "ExternalDataSet::CalculateChiSquare(): Warning did not find this parameter set!" 
-	      << "\n ... Leaving now. " << std::endl;
+        << "\n ... Leaving now. " << std::endl;
     PrintParameterSet(this_qe,this_abs,this_cx);
     std::exit(-1);
   }
@@ -246,23 +276,23 @@ double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, 
       
       // Check for missing MC information. For now, skip this data point
       if(vec_MC_Xsec(ix) != 0 || vec_MC_Xsec(iy) != 0)
-	sum_chi2 += (vec_data_Xsec(ix)-vec_MC_Xsec(ix)) * m_data_cov_inv(ix,iy) * (vec_data_Xsec(iy)-vec_MC_Xsec(iy));
+  sum_chi2 += (vec_data_Xsec(ix)-vec_MC_Xsec(ix)) * m_data_cov_inv(ix,iy) * (vec_data_Xsec(iy)-vec_MC_Xsec(iy));
       else{
-	if(ix==iy){
-	  newDataPoints--;
-	  std::cout << "... there wasn't xsec info for mom: " << vec_data_Mom[ix] 
-		    << ".Not touching the chisquare and reducing the number of data points" << std::endl;
-	}
+  if(ix==iy){
+    // newDataPoints--;
+    std::cout << "... there wasn't xsec info for mom: " << vec_data_Mom[ix] 
+        << ".Not touching the chisquare and reducing the number of data points" << std::endl;
+  }
       }
       
       if(VERBOSE_LEVEL && ix==iy) 
-	std::cout << "mom: " << vec_data_Mom[ix]
-		  << " vec_data_Xsec: "<<vec_data_Xsec(ix) 
-		  << " vec_MC_Xsec: "<<vec_MC_Xsec(ix) 
-		  << " vec_diff_Xsec: "<< vec_data_Xsec(ix) - vec_MC_Xsec(ix) 
-		  << " m_data_cov_inv(ix): " << m_data_cov_inv(ix,ix) 
-		  << " sum_chi2: " << sum_chi2
-		  << std::endl;
+  std::cout << "mom: " << vec_data_Mom[ix]
+      << " vec_data_Xsec: "<<vec_data_Xsec(ix) 
+      << " vec_MC_Xsec: "<<vec_MC_Xsec(ix) 
+      << " vec_diff_Xsec: "<< vec_data_Xsec(ix) - vec_MC_Xsec(ix) 
+      << " m_data_cov_inv(ix): " << m_data_cov_inv(ix,ix) 
+      << " sum_chi2: " << sum_chi2
+      << std::endl;
     }
   }
   
@@ -281,17 +311,22 @@ double ExternalDataSet::CalculateChiSquare(Double_t this_qe, Double_t this_abs, 
 // Print the parameter set. Should make something more general
 //***********************************************************************************
 void ExternalDataSet::PrintParameterSet(double f_qe, double f_abs, double f_cx){
-
-  std::cout << "f_qe: " << f_qe
-	    << "\tf_abs: " << f_abs
-	    << "\tf_cx: " << f_cx
-	    << std::endl;
+if (nuclFit) std::cout << "f_reac: " << f_qe
+      << "\tf_elas: " << f_abs
+      << "\tf_tot: " << f_cx
+      << std::endl;
+else std::cout << "f_qe: " << f_qe
+      << "\tf_abs: " << f_abs
+      << "\tf_cx: " << f_cx
+      << std::endl;
 }
+//***********************************************************************************
 
 void ExternalDataSet::FillMiniTreeFromMCScan(){
-
-  std::string filename = "input/scan_result_ieki_LE.root";
-  FSIParameterScan aFSIParameterScan(filename);
+  std::string filename = "";
+  if (nuclFit) filename = "input/fullscan0418_selec.root";
+  else filename = "input/scan_result_ieki_LE.root";
+  FSIParameterScan aFSIParameterScan(filename,nuclFit);
   const Int_t nentries = aFSIParameterScan.fChain->GetEntries();
   std::cout << "MC Scan has # entries = " << nentries << std::endl;
   
@@ -316,27 +351,31 @@ void ExternalDataSet::FillMiniTreeFromMCScan(){
       // to determine if this entry should be saved
       // NOTE: A check for the target should be added later on!!
       if(TMath::Abs(aFSIParameterScan.mom - vec_data_Mom[point])<0.05){
-	
-	// If reactive data point
-	if(intrType == 1) specific_xsec = (aFSIParameterScan.xqe + aFSIParameterScan.xabs + aFSIParameterScan.xcx +aFSIParameterScan.xdcx +aFSIParameterScan.xhadr);
-	// If quasi-elastic data point
-	if(intrType == 2) specific_xsec = aFSIParameterScan.xqe;
-	// If ABS data point
-	if(intrType == 3) specific_xsec = aFSIParameterScan.xabs;
-	// If CX data point
-	if(intrType == 4) specific_xsec = aFSIParameterScan.xcx;
-	// If ABS+CX data point
-	if(intrType == 5) specific_xsec = (aFSIParameterScan.xabs + aFSIParameterScan.xcx);
-	
-	MiniMCScan->Fill();
-	
+       if (nuclFit){
+          if(intrType == 1) specific_xsec = aFSIParameterScan.xsecrxn;
+          if(intrType == 2) specific_xsec = aFSIParameterScan.xsecelastic;
+          if(intrType == 3) specific_xsec = aFSIParameterScan.xsectotal;
+       }else{
+  // If reactive data point
+        if(intrType == 1) specific_xsec = (aFSIParameterScan.xqe + aFSIParameterScan.xabs + aFSIParameterScan.xcx +aFSIParameterScan.xdcx +aFSIParameterScan.xhadr);
+        // If quasi-elastic data point
+        if(intrType == 2) specific_xsec = aFSIParameterScan.xqe;
+        // If ABS data point
+        if(intrType == 3) specific_xsec = aFSIParameterScan.xabs;
+        // If CX data point
+        if(intrType == 4) specific_xsec = aFSIParameterScan.xcx;
+        // If ABS+CX data point
+        if(intrType == 6) specific_xsec = (aFSIParameterScan.xabs + aFSIParameterScan.xcx);
+  }
+  MiniMCScan->Fill();
+
       }
     }
   }
   
   std::cout << "MiniMCScan has # entries: " << MiniMCScan->GetEntries()
-	    << ". Entries per data point: " << MiniMCScan->GetEntries()/nDataPoints
-	    << std::endl;
+      << ". Entries per data point: " << MiniMCScan->GetEntries()/nDataPoints
+      << std::endl;
 
 }
       
