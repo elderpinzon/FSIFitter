@@ -19,12 +19,14 @@ class ExternalDataSet{
 private:
   
   std::string FileName;
-  TString SetName;
-  TString Nuclei;
-  TString pionType;
+  std::string SetName;
+  std::string Nuclei;
+  std::string pionType;
+  std::string nucleonType;
   TString intrTypeString;
   Int_t intrType;
   Int_t nDataPoints;
+
   TTree *MiniMCScan; //A TTree with only the MC scans relevant for this data set
   TVectorD vec_data_Mom;
   TVectorD vec_data_Xsec;
@@ -39,7 +41,7 @@ private:
 public:
 
   ExternalDataSet();
-  ExternalDataSet(TString fFileName);
+  ExternalDataSet(std::string fFileName, bool fnuclFit=0);
   //ExternalDataSet& operator=(const ExternalDataSet&);
   void Initialize(); 
   void ParseDataSetName();
@@ -59,6 +61,9 @@ public:
   double GetChiSquare(){ return fDataSetChiSquare;};
   void PrintParameterSet(double f_qe, double f_abs, double f_cx);
   void FillMiniTreeFromMCScan();
+
+  bool nuclFit;
+
 };
 
 #endif  

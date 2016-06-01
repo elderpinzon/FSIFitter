@@ -17,14 +17,16 @@
 #include "Math/Util.h"
 
 
-#include "NuclExternalDataSet.hxx"
-#include "NuclFSIParameterScan.h"
-#include "NuclFSIFitFCN.hxx"
-#include "NuclFSIChi2Grid.hxx"
+#include "ExternalDataSet.hxx"
+#include "FSIParameterScan.hxx"
+#include "FSIFitFCN.hxx"
+#include "FSIChi2Grid.hxx"
 
 // Running options
 bool kUseInputGrid = false;
 bool kBuildGridFromScratch = false;
+bool nuclFit=0;
+bool kOctave = false;
 
 // Input file with MC scan
 std::string inputfileScan="";
@@ -33,10 +35,10 @@ std::string inputfileScan="";
 std::string inputfileGrid="";
 
 // Output file with fit results
-std::string outputfileFit ="output/fit_result_nucl.root";
+std::string outputfileFit ="output/fit_result.root";
 
 // Vector of data sets for easier manipulation
-std::vector< NuclExternalDataSet::NuclExternalDataSet > AllDataSets;
+std::vector< ExternalDataSet::ExternalDataSet > AllDataSets;
 
-// NuclFSIChi2Grid object
-NuclFSIChi2Grid::NuclFSIChi2Grid aFSIChi2Grid;
+// FSIChi2Grid object
+FSIChi2Grid::FSIChi2Grid aFSIChi2Grid;

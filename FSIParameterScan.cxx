@@ -37,9 +37,15 @@ void FSIParameterScan::DetermineGridSize(){
     if (ientry < 0) break;
     
     fsi_pars[0] = mom;
-    fsi_pars[1] = qe;
-    fsi_pars[2] = abs;
-    fsi_pars[3] = cx;
+    if (nuclFit){
+      fsi_pars[1] = spifact;
+      fsi_pars[2] = elafact;
+      fsi_pars[3] = totfact;
+    }else{
+      fsi_pars[1] = qe;
+      fsi_pars[2] = abs;
+      fsi_pars[3] = cx;
+    }
     
     for(int par=0; par<3; par++){
       if(fsi_pars[par]<fsi_par_low[par]) fsi_par_low[par] = fsi_pars[par];
@@ -64,7 +70,8 @@ void FSIParameterScan::Test(){
       nb = fChain->GetEntry(jentry);   nbytes += nb;
 
       if(jentry<10 || (nentries-jentry)<10)
-	std::cout<<"jentry: " <<jentry << " mom: "<<mom<<" qe: "<<qe<<" abs: "<<abs<<" cx: "<<cx<<std::endl;
+      if(nuclFit) std::cout<<"jentry: " <<jentry << " mom: "<<mom<<" tot: "<<totfact<<" elas: "<<elafact<<" spi: "<<spifact<<" dpi: "<<dpifact<<std::endl;
+      else std::cout<<"jentry: " <<jentry << " mom: "<<mom<<" qe: "<<qe<<" abs: "<<abs<<" cx: "<<cx<<std::endl;
     }
 }
 
@@ -77,8 +84,10 @@ void FSIParameterScan::InterpolateXsecs()
 {
 
   // One for each xsec: xqe, xabs, xcx, xdcx, xhadr
+  std::vector< std::string > xsecs;
   TMultiDimFit *multifit[5];
-  std::vector< std::string > xsecs = {"xqe","xabs","xcx","xdcx","xhadr"};
+  if(nuclFit) xsecs = {"xsecelastic","xsecspi","xsecdpi","xsecrxn","xsectotal"};
+  else xsecs = {"xqe","xabs","xcx","xdcx","xhadr"};  
   
   for(int i = 0; i<1; i++){
 
@@ -105,15 +114,27 @@ void FSIParameterScan::InterpolateXsecs()
       if (ientry < 0) break;
       nb = fChain->GetEntry(jentry);   nbytes += nb;
       // if (Cut(ientry) < 0) continue;
-      fsi_pars[0] = mom;
-      fsi_pars[1] = qe;
-      fsi_pars[2] = abs;
-      fsi_pars[3] = cx;
-      if(i == 0) multifit[i]->AddRow(fsi_pars,xqe);
-      if(i == 1) multifit[i]->AddRow(fsi_pars,xabs);
-      if(i == 2) multifit[i]->AddRow(fsi_pars,xcx);
-      if(i == 3) multifit[i]->AddRow(fsi_pars,xdcx);
-      if(i == 4) multifit[i]->AddRow(fsi_pars,xhadr);
+      if (nuclFit){
+        fsi_pars[0] = mom;
+        fsi_pars[1] = spifact;
+        fsi_pars[2] = elafact;
+        fsi_pars[3] = totfact;
+        if(i == 0) multifit[i]->AddRow(fsi_pars,xsecelastic);
+        if(i == 1) multifit[i]->AddRow(fsi_pars,xsecspi);
+        if(i == 2) multifit[i]->AddRow(fsi_pars,xsecdpi);
+        if(i == 3) multifit[i]->AddRow(fsi_pars,xsecrxn);
+        if(i == 4) multifit[i]->AddRow(fsi_pars,xsectotal);
+      }else{
+        fsi_pars[0] = mom;
+        fsi_pars[1] = qe;
+        fsi_pars[2] = abs;
+        fsi_pars[3] = cx;
+        if(i == 0) multifit[i]->AddRow(fsi_pars,xqe);
+        if(i == 1) multifit[i]->AddRow(fsi_pars,xabs);
+        if(i == 2) multifit[i]->AddRow(fsi_pars,xcx);
+        if(i == 3) multifit[i]->AddRow(fsi_pars,xdcx);
+        if(i == 4) multifit[i]->AddRow(fsi_pars,xhadr);       
+      }
     }
     
     // Print out the statistics of input sample

@@ -13,6 +13,8 @@ public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
 
+   bool nuclFit;
+
    // Declaration of leaf types
    Double_t        mom;
    Double_t        qe;
@@ -29,6 +31,16 @@ public :
    Double_t        xcx;
    Double_t        xdcx;
    Double_t        xhadr;
+   //nucleon
+   Double_t        totfact;
+   Double_t        elafact;
+   Double_t        spifact;
+   Double_t        dpifact;
+   Double_t        xsecelastic;
+   Double_t        xsecspi;
+   Double_t        xsecdpi;
+   Double_t        xsecrxn;
+   Double_t        xsectotal;   
 
    // List of branches
    TBranch        *b_mom;   //!
@@ -46,6 +58,16 @@ public :
    TBranch        *b_xcx;   //!
    TBranch        *b_xdcx;   //!
    TBranch        *b_xhadr;   //!
+   //nucleon
+   TBranch        *b_totfact;   //!
+   TBranch        *b_elafact;   //!
+   TBranch        *b_spifact;   //!
+   TBranch        *b_dpifact;   //!
+   TBranch        *b_xsecelastic;   //!
+   TBranch        *b_xsecspi;   //!
+   TBranch        *b_xsecdpi;   //!
+   TBranch        *b_xsecrxn;   //!
+   TBranch        *b_xsectotal;   //!
 
    Double_t qe_low;
    Double_t qe_high;
@@ -62,7 +84,7 @@ public :
    Double_t fsi_par_step[3];
 
    FSIParameterScan(){};
-   FSIParameterScan(std::string ScanFileName);
+   FSIParameterScan(std::string ScanFileName, bool fnuclFit=0);
    virtual ~FSIParameterScan();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
@@ -79,8 +101,10 @@ public :
 #endif
 
 #ifdef FSIParameterScan_cxx
-FSIParameterScan::FSIParameterScan(std::string ScanFileName) : fChain(0) 
+FSIParameterScan::FSIParameterScan(std::string ScanFileName, bool fnuclFit) : fChain(0) 
 {
+    nuclFit=fnuclFit;
+
   TTree *tree = 0;
   Long_t id,size,flags,modtime;
   if(!gSystem->GetPathInfo(ScanFileName.c_str(),&id,&size,&flags,&modtime)){
@@ -88,7 +112,8 @@ FSIParameterScan::FSIParameterScan(std::string ScanFileName) : fChain(0)
     if (!f || !f->IsOpen()) {
       f = new TFile(ScanFileName.c_str());
     }
-    f->GetObject("t",tree);
+    if (nuclFit) f->GetObject("T",tree);
+    else f->GetObject("t",tree);
   }
   else{
     std::cout << "\nFSIParameterScan could not find specified parameter scan file "
@@ -146,21 +171,34 @@ void FSIParameterScan::Init(TTree *tree)
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
-   fChain->SetBranchAddress("mom", &mom, &b_mom);
-   fChain->SetBranchAddress("qe", &qe, &b_qe);
-   fChain->SetBranchAddress("abs", &abs, &b_abs);
-   fChain->SetBranchAddress("cx", &cx, &b_cx);
-   fChain->SetBranchAddress("nall", &nall, &b_nall);
-   fChain->SetBranchAddress("nqe", &nqe, &b_nqe);
-   fChain->SetBranchAddress("nabs", &nabs, &b_nabs);
-   fChain->SetBranchAddress("ncx", &ncx, &b_ncx);
-   fChain->SetBranchAddress("ndcx", &ndcx, &b_ndcx);
-   fChain->SetBranchAddress("nhadr", &nhadr, &b_nhadr);
-   fChain->SetBranchAddress("xqe", &xqe, &b_xqe);
-   fChain->SetBranchAddress("xabs", &xabs, &b_xabs);
-   fChain->SetBranchAddress("xcx", &xcx, &b_xcx);
-   fChain->SetBranchAddress("xdcx", &xdcx, &b_xdcx);
-   fChain->SetBranchAddress("xhadr", &xhadr, &b_xhadr);
+   if (nuclFit){
+     fChain->SetBranchAddress("mom", &mom, &b_mom);
+     fChain->SetBranchAddress("totfact", &totfact, &b_totfact);
+     fChain->SetBranchAddress("elafact", &elafact, &b_elafact);
+     fChain->SetBranchAddress("spifact", &spifact, &b_spifact);
+     fChain->SetBranchAddress("dpifact", &dpifact, &b_dpifact);
+     fChain->SetBranchAddress("xsecelastic", &xsecelastic, &b_xsecelastic);
+     fChain->SetBranchAddress("xsecspi", &xsecspi, &b_xsecspi);
+     fChain->SetBranchAddress("xsecdpi", &xsecdpi, &b_xsecdpi);
+     fChain->SetBranchAddress("xsecrxn", &xsecrxn, &b_xsecrxn);
+     fChain->SetBranchAddress("xsectotal", &xsectotal, &b_xsectotal);
+   }else{
+     fChain->SetBranchAddress("mom", &mom, &b_mom);
+     fChain->SetBranchAddress("qe", &qe, &b_qe);
+     fChain->SetBranchAddress("abs", &abs, &b_abs);
+     fChain->SetBranchAddress("cx", &cx, &b_cx);
+     fChain->SetBranchAddress("nall", &nall, &b_nall);
+     fChain->SetBranchAddress("nqe", &nqe, &b_nqe);
+     fChain->SetBranchAddress("nabs", &nabs, &b_nabs);
+     fChain->SetBranchAddress("ncx", &ncx, &b_ncx);
+     fChain->SetBranchAddress("ndcx", &ndcx, &b_ndcx);
+     fChain->SetBranchAddress("nhadr", &nhadr, &b_nhadr);
+     fChain->SetBranchAddress("xqe", &xqe, &b_xqe);
+     fChain->SetBranchAddress("xabs", &xabs, &b_xabs);
+     fChain->SetBranchAddress("xcx", &xcx, &b_xcx);
+     fChain->SetBranchAddress("xdcx", &xdcx, &b_xdcx);
+     fChain->SetBranchAddress("xhadr", &xhadr, &b_xhadr);
+   }
    Notify();
 }
 
