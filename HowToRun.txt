@@ -2,4 +2,4 @@ Run with one of the following commands:
 
 ./ScatFit.exe -i input/scan_result_ieki_LE.root
 ./ScatFit.exe -t -i input/scan_result_ieki_LE.root
-./ScatFit.exe -i input/fullscan0418_selec.root
+./ScatFit.exe -f -i input/fullscan0418_selec.root
