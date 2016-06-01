@@ -19,23 +19,25 @@ SOURCES=ExternalDataSet.cxx FSIFitFCN.cxx FSIParameterScan.cxx FSIChi2Grid.cxx F
 #DICT=dict.cc
 LIBPISCAT=libPiScat.so
 
-MAIN=PiScatFit2016.cxx
+MAIN=ScatFit.cxx
 OBJ=$(MAIN:.cc=.o)
-EXECUTABLE=PiScatFit2016
+EXECUTABLE=ScatFit
 
 all: $(EXECUTABLE) $(LIBPISCAT)
 
 # $(EXECUTABLE): $(MAIN) $(LIBPISCAT)
 # 	$(CXX) -o $@.exe $^ $(LDFLAGS) $(INCLUDE) $(LDLIBS) -DVERBOSE
 
-PiScatFit2016: PiScatFit2016.cxx $(LIBPISCAT)
+ScatFit: ScatFit.cxx $(LIBPISCAT)
 	$(CXX) -o $@.exe $^ $(LDFLAGS) $(INCLUDE) $(LDLIBS) $(OCT_INCS) $(OCT_LIB_DIR) $(OCT_LIBS) -DVERBOSE
+	# $(CXX) -o $@.exe $^ $(LDFLAGS) $(INCLUDE) $(LDLIBS) -DVERBOSE
 
 $(LIBPISCAT): $(SOURCES) $(DICT)
 	$(CXX) $(SOFLAGS) $(OCT_INCS) -o $@ $(LDFLAGS) $(LDLIBS) $(OCT_LIB_DIR) $(OCT_LIBS) $^
+	# $(CXX) $(SOFLAGS) -o $@ $(LDFLAGS) $(LDLIBS) $^
 
 #$(DICT): $(HEADERS)
 #	$(ROO) -f $@ $(CFLAGS) -p $^
 
 clean:
-	rm -f PiScatFit2016.exe *.o *.so dict.*
+	rm -f ScatFit.exe *.o *.so dict.*

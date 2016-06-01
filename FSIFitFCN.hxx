@@ -17,7 +17,9 @@ class FSIFitFCN : public ROOT::Minuit2::FCNBase {
   
  public:
 
-  FSIFitFCN(FSIChi2Grid *aFSIChi2Grid): fFSIChi2Grid(aFSIChi2Grid), kOctave(false), kMultiDimFit(false){};
+  FSIFitFCN(){};
+  ~FSIFitFCN(){};
+  FSIFitFCN(FSIChi2Grid *aFSIChi2Grid, bool fnuclFit, bool fOctave, bool fMultiDimFit);
   void UseOctaveInterpolation(){ kOctave = true; kMultiDimFit = false;};
   void UseTMultiDimFitInterpolation() {kMultiDimFit = true; kOctave = false;};
   double operator() (const std::vector<double> & x) const;
@@ -26,6 +28,7 @@ class FSIFitFCN : public ROOT::Minuit2::FCNBase {
  private:
   
   FSIChi2Grid *fFSIChi2Grid;
+  bool nuclFit;
   bool kOctave;
   bool kMultiDimFit;
   
