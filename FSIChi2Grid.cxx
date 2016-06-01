@@ -168,42 +168,7 @@ void FSIChi2Grid::BuildFiniteGrid(){
       }
     }
   }else{
-  // Grid initializations
-//   double grid_step[nFSIpars] = {0.05,0.05,0.05};  
-//   double grid_start[nFSIpars] = {0.75,1.0,0.5};
-//   double grid_stops[nFSIpars] = {1.15,1.5,1.0};
-//   int nSteps[nFSIpars] = {9,11,11};
-  
-//   // Octave initializations
-//   string_vector argv (2);
-//   argv(0) = "FSIOctaveInterpolation";
-//   argv(1) = "-q";
-//   octave_main (2, argv.c_str_vec (), 1);
 
-//   for (int idim=0; idim<nFSIpars; idim++){
-    
-//     // Number of step grid points
-//     //nSteps[idim] = (grid_stops[idim]-grid_start[idim])/grid_step[idim] + 1;
-
-//     std::cout << "Building octave array of parameters: " << idim << " dim: " << nSteps[idim] << std::endl;
-
-//     // Vector with FSI pars
-//     x_vec[idim] = new Matrix(nSteps[idim],1);
-//     for (octave_idx_type i = 0; i < nSteps[idim]; i++){
-//       std::cout << grid_start[idim] + i*grid_step[idim] << std::endl;
-//       (*x_vec[idim])(i,0) = grid_start[idim] + i*grid_step[idim];
-//     }
-//     std::cout << (*x_vec[idim]);
-//   }
-  
-//   //dim_vector dim_vec(nSteps,nSteps);       // Start off 2D
-//   //dim_vec.resize(nFSIpars,nSteps);         // Then increase
-//   dim_vector dim_vec(nSteps[0],nSteps[1],nSteps[2]);
-//   v_vec = new Array<double>(dim_vec,999); // Initialize with large chi^2 in case some failed in filling tree
-//   std::cout << "v_vec at the start: " << (*v_vec) << std::endl; 
-
-// =======
-// >>>>>>> 1.4
    /*
   // Was trying to simplify loops but gave up :(
   int fsi_iter[nFSIpars];
@@ -430,7 +395,7 @@ double FSIChi2Grid::GetSplinedGridPoint(const std::vector<double> &x){
     v_point = out_v_point(0).matrix_value ();
   }
   double splined_chi2 = v_point(0);
-  std::cout << "splined_chi2  : " << splined_chi2 << std::endl;
+  // std::cout << "splined_chi2  : " << splined_chi2 << std::endl;
 
   return splined_chi2;
 
