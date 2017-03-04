@@ -6,7 +6,7 @@ import elementinfo
 import sys
 import locale
 
-GENERAL_SCRATCH="/scratch/s/sbhadra/elder/NIWG/FSIFitter/scripts/"
+GENERAL_SCRATCH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 #reac = sys.argv[1]
 element = sys.argv[1]
