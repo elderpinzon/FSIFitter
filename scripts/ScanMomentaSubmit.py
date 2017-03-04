@@ -7,7 +7,7 @@ import ParameterVariationsExtra
 
 
 ## Flag to submit jobs or not
-SubmitOrNot = True
+SubmitOrNot = False
 
 ## Folder for storage (this path)
 GENERAL_SCRATCH = os.path.dirname(os.path.realpath(__file__))
@@ -29,15 +29,11 @@ for nucleus in nuclei:
         print "%s momenta %s: " % (nucleus,pion)
         print momenta
 
-        ## For each momenta launch the subroutine to create jobs
-        # for mom in momenta:
-        #     ParameterVariationsExtra.build_pbs_files("single",
-        #                                                       nucleus,
-        #                                                       mom,
-        #                                                       pions[pion],
-        #                                                       601,
-        #                                                       SubmitOrNot)
-
-# ParameterVariationsExtra.build_pbs_files("single","c",9.54,211,601,False)
-# ParameterVariationsExtra.build_pbs_files("single","c",459.54,211,601,False)
-ParameterVariationsExtra.build_pbs_files("single","c",999.54,211,601,False)
+        For each momenta launch the subroutine to create jobs
+        for mom in momenta:
+            ParameterVariationsExtra.build_pbs_files("single",
+                                                              nucleus,
+                                                              mom,
+                                                              pions[pion],
+                                                              601,
+                                                              SubmitOrNot)
