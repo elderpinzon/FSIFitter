@@ -1,0 +1,55 @@
+#!/bin/bash
+#PBS -l nodes=1:ppn=8,walltime=08:00:00
+#PBS -N piscat-aho
+shopt -s expand_aliases
+module load gcc
+module load gnu-parallel
+module load python
+
+##Source NEUT
+source /home/s/sbhadra/elder/installed_NEUT/v0/setup_defaultGEANT.sh 
+
+##Use Ramdisk to avoid I/O bottleneck issues
+mkdir -p /dev/shm/$USER
+cd /dev/shm/$USER
+
+echo -n "Started parallel on "
+date
+insert_parallel
+echo -n "Finished parallel on "
+date
+
+function save_results {    
+    echo -n "Summarize logs and cross-section txts and tar root files on "
+    date
+    #insert_summary
+    echo -n "Copying of output complete on "
+    date
+}
+ 
+function cleanup_ramdisk {
+    echo -n "Cleaning up ramdisk directory /dev/shm/$USER on "
+    date
+    rm -rf /dev/shm/$USER
+    echo -n "done at "
+    date
+}
+
+function trap_term {
+    echo -n "Trapped term (soft kill) signal on "
+    date
+    save_results
+    cleanup_ramdisk
+    exit
+}
+
+#trap the termination signal, and call the function 'trap_term' when 
+# that happens, so results may be saved.
+trap "trap_term" TERM
+
+#Done cleanly
+save_results
+cleanup_ramdisk
+
+echo -n "Job finished cleanly on "
+date
