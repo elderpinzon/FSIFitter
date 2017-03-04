@@ -29,7 +29,7 @@ for nucleus in nuclei:
         print "%s momenta %s: " % (nucleus,pion)
         print momenta
 
-        For each momenta launch the subroutine to create jobs
+        ## For each momenta launch the subroutine to create jobs
         for mom in momenta:
             ParameterVariationsExtra.build_pbs_files("single",
                                                               nucleus,
