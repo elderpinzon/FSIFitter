@@ -16,16 +16,23 @@ public :
    bool nuclFit;
 
    // Declaration of leaf types
+   Int_t           target;
    Double_t        mom;
-   Double_t        qe;
-   Double_t        abs;
-   Double_t        cx;
+   Int_t           pid;
+   Double_t        FEFQE;
+   Double_t        FEFABS;
+   Double_t        FEFCX;
+   Double_t        FEFINEL;
+   Double_t        FEFQEH;
+   Double_t        FEFCXH;
+   Double_t        FEFALL;
    Double_t        nall;
    Double_t        nqe;
    Double_t        nabs;
    Double_t        ncx;
    Double_t        ndcx;
    Double_t        nhadr;
+   Double_t        xreac;
    Double_t        xqe;
    Double_t        xabs;
    Double_t        xcx;
@@ -43,16 +50,23 @@ public :
    Double_t        xsectotal;   
 
    // List of branches
+   TBranch        *b_target;   //!
    TBranch        *b_mom;   //!
-   TBranch        *b_qe;   //!
-   TBranch        *b_abs;   //!
-   TBranch        *b_cx;   //!
+   TBranch        *b_pid;   //!
+   TBranch        *b_FEFQE;   //!
+   TBranch        *b_FEFABS;   //!
+   TBranch        *b_FEFCX;   //!
+   TBranch        *b_FEFINEL;   //!
+   TBranch        *b_FEFQEH;   //!
+   TBranch        *b_FEFCXH;   //!
+   TBranch        *b_FEFALL;   //!
    TBranch        *b_nall;   //!
    TBranch        *b_nqe;   //!
    TBranch        *b_nabs;   //!
    TBranch        *b_ncx;   //!
    TBranch        *b_ndcx;   //!
    TBranch        *b_nhadr;   //!
+   TBranch        *b_xreac;   //!
    TBranch        *b_xqe;   //!
    TBranch        *b_xabs;   //!
    TBranch        *b_xcx;   //!
@@ -84,7 +98,7 @@ public :
    Double_t fsi_par_step[3];
 
    FSIParameterScan(){};
-   FSIParameterScan(std::string ScanFileName, bool fnuclFit=0);
+   FSIParameterScan(TString ScanFileName, bool fnuclFit=0);
    virtual ~FSIParameterScan();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
@@ -95,22 +109,22 @@ public :
    virtual Bool_t   Notify();
    virtual void     Show(Long64_t entry = -1);
    void DetermineGridSize();
-   void InterpolateXsecs();
+
 };
 
 #endif
 
 #ifdef FSIParameterScan_cxx
-FSIParameterScan::FSIParameterScan(std::string ScanFileName, bool fnuclFit) : fChain(0) 
+FSIParameterScan::FSIParameterScan(TString ScanFileName, bool fnuclFit) : fChain(0) 
 {
     nuclFit=fnuclFit;
 
   TTree *tree = 0;
   Long_t id,size,flags,modtime;
-  if(!gSystem->GetPathInfo(ScanFileName.c_str(),&id,&size,&flags,&modtime)){
-    TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(ScanFileName.c_str());
+  if(!gSystem->GetPathInfo(ScanFileName.Data(),&id,&size,&flags,&modtime)){
+    TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(ScanFileName.Data());
     if (!f || !f->IsOpen()) {
-      f = new TFile(ScanFileName.c_str());
+      f = new TFile(ScanFileName.Data());
     }
     if (nuclFit) f->GetObject("T",tree);
     else f->GetObject("t",tree);
@@ -130,8 +144,6 @@ FSIParameterScan::FSIParameterScan(std::string ScanFileName, bool fnuclFit) : fC
 
 FSIParameterScan::~FSIParameterScan()
 {
-  // Not sure why this is called right before FSIChi2Grid::InterpolateFiniteGrid() :(
-  //std::cout<<"~FSIParameterScan"<<std::endl;
    if (!fChain) return;
    delete fChain->GetCurrentFile();
 }
@@ -183,16 +195,23 @@ void FSIParameterScan::Init(TTree *tree)
      fChain->SetBranchAddress("xsecrxn", &xsecrxn, &b_xsecrxn);
      fChain->SetBranchAddress("xsectotal", &xsectotal, &b_xsectotal);
    }else{
+     fChain->SetBranchAddress("target", &target, &b_target);
      fChain->SetBranchAddress("mom", &mom, &b_mom);
-     fChain->SetBranchAddress("qe", &qe, &b_qe);
-     fChain->SetBranchAddress("abs", &abs, &b_abs);
-     fChain->SetBranchAddress("cx", &cx, &b_cx);
+     fChain->SetBranchAddress("pid", &pid, &b_pid);
+     fChain->SetBranchAddress("FEFQE", &FEFQE, &b_FEFQE);
+     fChain->SetBranchAddress("FEFABS", &FEFABS, &b_FEFABS);
+     fChain->SetBranchAddress("FEFCX", &FEFCX, &b_FEFCX);
+     fChain->SetBranchAddress("FEFINEL", &FEFINEL, &b_FEFINEL);
+     fChain->SetBranchAddress("FEFQEH", &FEFQEH, &b_FEFQEH);
+     fChain->SetBranchAddress("FEFCXH", &FEFCXH, &b_FEFCXH);
+     fChain->SetBranchAddress("FEFALL", &FEFALL, &b_FEFALL);
      fChain->SetBranchAddress("nall", &nall, &b_nall);
      fChain->SetBranchAddress("nqe", &nqe, &b_nqe);
      fChain->SetBranchAddress("nabs", &nabs, &b_nabs);
      fChain->SetBranchAddress("ncx", &ncx, &b_ncx);
      fChain->SetBranchAddress("ndcx", &ndcx, &b_ndcx);
      fChain->SetBranchAddress("nhadr", &nhadr, &b_nhadr);
+     fChain->SetBranchAddress("xreac", &xreac, &b_xreac);
      fChain->SetBranchAddress("xqe", &xqe, &b_xqe);
      fChain->SetBranchAddress("xabs", &xabs, &b_xabs);
      fChain->SetBranchAddress("xcx", &xcx, &b_xcx);
