@@ -17,19 +17,18 @@
 
 #include "TTree.h"
 #include "TVector.h"
+#include "TGraph.h"
 #include "TGraphErrors.h"
 #include "TMatrixDSym.h"
 #include "TDecompChol.h"
-#include <iostream>
-//#include <TMultiDimFit.h>
-#include <TMultiDimFit.h>
+#include "TMultiDimFit.h"
+#include "TPaveText.h"
 
 #include "FSIParameterScan.hxx"
 #include "ExternalDataSet.hxx"
 #include "FSIFitterUtils.hxx"
-
-// Temporarily setting grid size here - need better way of doing it!
-const int nFSIpars = 3;
+#include "FSIFitterConfig.hxx"
+#include "ModelPrediction.hxx"
 
 class FSIChi2Grid{
   
@@ -37,19 +36,35 @@ private:
 
   // Vector of datasets to be used in the chisquare calculation
   std::vector< ExternalDataSet::ExternalDataSet > fAllDataSets;
+  Int_t nPointsUsed;
 
-  // NEUT MC parameter scan to be used
-  //FSIParameterScan fFSIParameterScan;
+  // Auxiliary vectors and matrices
+  TMatrixD fullCovariance;
+  TMatrixD fullCovarianceInv;
+  TMatrixD fullCorrelation;
+  TVectorD allErrors;
+  TVectorD allMomenta;
+  TVectorD allSigmaData;
+  TVectorD allTargets;
+  std::vector<TString> allTargetsString;
+  TVectorD allPids;
+  TVectorD allTypes;
+  
+  // Name of the file with the result of NEUT grid scan
+  TString FileName;
 
   // A tree for storage/reading and its necessary variables
+  TFile *foutTree;
   TTree *ChiSquareFiniteGrid;
   Double_t fqe;
   Double_t fabs;
   Double_t fcx;
+  Double_t fFSIPars[nFSIparsFitted];
   Double_t fchisquare;
   Double_t freac;
   Double_t felas;
   Double_t ftot;
+
   // The TMultiDimFit object
   TMultiDimFit *multifit;
 
@@ -62,17 +77,27 @@ public:
 
   FSIChi2Grid(){};
   ~FSIChi2Grid(){};
-  FSIChi2Grid(ExternalDataSet SingleDataSet, bool fnuclFit=0, bool fOctave=0, bool MultiDimFit=0);
-  FSIChi2Grid(std::vector< ExternalDataSet::ExternalDataSet > AllDataSets, bool fnuclFit=0, bool fOctave=0, bool MultiDimFit=0);  
-  //FSIChi2Grid(std::vector< ExternalDataSet::ExternalDataSet > AllDataSets, FSIParameterScan &aFSIParameterScan);
-  FSIChi2Grid(TTree &BuiltGridTree, bool fnuclFit=0, bool fOctave=0, bool MultiDimFit=0);
-  void ImportDataSets(ExternalDataSet AllDataSets);
-  void BuildFiniteGrid();
-  TTree* GetFiniteGrid();
-  void InterpolateFiniteGrid(bool kUseInputGrid);
-  void UseExistingGrid();
-  double GetInterpolatedGridPoint(const std::vector<double> &x);
-  double GetSplinedGridPoint(const std::vector<double> &x);
+  FSIChi2Grid(std::vector< ExternalDataSet::ExternalDataSet > AllDataSets);
+
+  // Getters and Setters
+  void SetOctaveInterpolation(){kOctave=true;};
+  void SetMultiDimFitInterpolation(){kMultiDimFit=true;};
+  void SetGridScanFileName(TString fileName){FileName = fileName;};
+  TTree* GetFiniteGrid(){return ChiSquareFiniteGrid;};
+  Double_t GetInterpolatedGridPoint(const std::vector<Double_t> &x);
+  Double_t GetSplinedGridPoint(const std::vector<Double_t> &x);
+
+
+  // Functions to buld or run things
+  void BuildCovariance();
+  void FastBuildFiniteGrid();
+  void BuildOctaveGrid();
+  void BuildTMultiDimFitGrid();
+  void RunTMultiDimFitInterpolation();
+  void InterpolateFiniteGrid();
+  void PlotChiSquare(const std::vector<Double_t> &x_center, int index);
+  Double_t CalculateModelChiSquare(ModelPrediction model);  
+  bool CheckInsideGridBoundary(const std::vector<Double_t> &x);
   
   bool nuclFit;
   bool kOctave;
