@@ -4,6 +4,8 @@
 #include <string>
 
 #include "TMultiDimFit.h"
+#include "TStopwatch.h"
+
 #include "FSIParameterScan.hxx"
 #include "FSIFitterUtils.hxx"
 
