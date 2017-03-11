@@ -148,7 +148,7 @@ void InterpolatedCrossSectionsOctave::BuildGrid(){
     kIndices[6] = (aFSIParameterScan.FEFQEH - FSIParsMin[5])/FSIParsStep[5] + 0.1;
     kIndices[7] = (aFSIParameterScan.FEFQEH - FSIParsMin[6])/FSIParsStep[6] + 0.1;
 
-    Array<octave_idx_type> index_array(dim_vector((octave_idx_type)nPars));
+    Array<octave_idx_type> index_array(dim_vector((octave_idx_type)nPars,1));
     
     // If LE point manually vary the HE parameters
     if(aFSIParameterScan.mom < 400){
@@ -264,7 +264,8 @@ Double_t InterpolatedCrossSectionsOctave::GetSplinedGridPoint(Int_t thisXSec, co
     in.append( octave_value( *x_point[idim] ) );
 
   // Spline interpolation
-  in.append( octave_value("spline"));  // Default is linear
+  //in.append( octave_value("spline"));
+  in.append( octave_value("linear"));
 
   // Default value outside of the grid
   in.append( octave_value(999));
