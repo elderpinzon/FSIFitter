@@ -249,7 +249,7 @@ void FSIChi2Grid::FastBuildFiniteGrid(){
   }
   
   // Actual chi2 calculation for each parameter combo
-  Array<octave_idx_type> index_array(dim_vector((octave_idx_type)nFSIparsFitted));
+  Array<octave_idx_type> index_array(dim_vector((octave_idx_type)nFSIparsFitted,1));
   for(Int_t set = 0; set < nVariations; set++){
 
     // From global index to individual FSI indices
