@@ -26,7 +26,7 @@ FSIChi2Grid::FSIChi2Grid(std::vector< ExternalDataSet::ExternalDataSet > AllData
   fAllDataSets = AllDataSets;
   
   // Store chisquare finite grid in output file
-  foutTree = new TFile("output/finite_chi2_grid.root","RECREATE");
+  //foutTree = new TFile("output/finite_chi2_grid.root","RECREATE");
 
   // Set-up TTree for storage of the finite grid
   ChiSquareFiniteGrid = new TTree("Chi2Grid","Finite Chi Square Grid Tree");
@@ -274,8 +274,11 @@ void FSIChi2Grid::FastBuildFiniteGrid(){
       // Make sure that the values are sensible
       if(allSigmaData[point] <= 0 || allSigmaMC[set][point] <= 0){
 	std::cout << "Missing digma. point: " << point << " set: " << set 
+		  << " mom: " << allMomenta[point]
+		  << " A: " << allTargets[point]
 		  << " allSigmaData: " << allSigmaData[point]
 		  << " allSigmaMC: " << allSigmaMC[set][point] << std::endl;
+	
 	std::exit(1);
       }
     }
@@ -296,12 +299,12 @@ void FSIChi2Grid::FastBuildFiniteGrid(){
       (*v_vec)(index_array) = _kChiSquare;
     
     fchisquare = _kChiSquare;
-    ChiSquareFiniteGrid->Fill();
+    //ChiSquareFiniteGrid->Fill();
     
   }
 
-  foutTree->cd();
-  ChiSquareFiniteGrid->Write();
+  //foutTree->cd();
+  //ChiSquareFiniteGrid->Write();
 
   std::cout<< std::endl << "FSIChi2Grid::FastBuildGrid()... done in " 
 	   << s.RealTime() << " seconds. Stored grid with entries: " 
