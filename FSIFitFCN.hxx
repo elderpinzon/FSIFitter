@@ -25,7 +25,7 @@ class FSIFitFCN : public ROOT::Minuit2::FCNBase {
   double operator() (const std::vector<double> & x) const;
   double operator() (const double * par) const;
   double Up() const {return 1.;}
-  void SetScalingFactor(Double_t factor){scalingFactor = factor;};
+  void SetScalingFactor(Double_t factor);
   void SetNPARS(Int_t NPARS){_NPARS = NPARS;};
 
  private:
