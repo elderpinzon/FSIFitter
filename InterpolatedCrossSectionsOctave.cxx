@@ -1,6 +1,6 @@
 //***********************************************************************************
 // InterpolatedCrossSectionsOctave.cxx
-// Interpolates cross sections from an input grid scan using TMultiDimFit
+// Interpolates cross sections from an input grid scan using Octave
 // Authors:
 //   Elder Pinzon <elder@yorku.ca>
 //   York University
@@ -48,11 +48,11 @@ InterpolatedCrossSectionsOctave::InterpolatedCrossSectionsOctave(TString fFileNa
   dim_vector dim_vec(nStepsOctave[0],nStepsOctave[1],nStepsOctave[2],nStepsOctave[3],nStepsOctave[4],nStepsOctave[5]);
 
   // Initialize with large value in case some failed in filling tree
-  v_reac = new Array<double>(dim_vec,999);
-  v_qe = new Array<double>(dim_vec,999);
-  v_abs = new Array<double>(dim_vec,999);
-  v_cx = new Array<double>(dim_vec,999);
-  v_abscx = new Array<double>(dim_vec,999);
+  v_reac = new Array<double>(dim_vec,9999);
+  v_qe = new Array<double>(dim_vec,9999);
+  v_abs = new Array<double>(dim_vec,9999);
+  v_cx = new Array<double>(dim_vec,9999);
+  v_abscx = new Array<double>(dim_vec,9999);
     
 }
 
@@ -96,8 +96,11 @@ void InterpolatedCrossSectionsOctave::BuildMomentumIndices(){
   
   // Sort vector by ascending order (for no particular reason)
   std::sort(allMoms.begin(), allMoms.end());
-  std::cout << "allMoms size: " << allMoms.size() << std::endl;
-  
+  std::cout << "allMoms size: " << allMoms.size() << ". Listed below: " << std::endl;
+  for(Int_t i = 0; i < (Int_t)allMoms.size(); i++)
+    printf("%.2f ",allMoms[i]);
+  std::cout<<std::endl;
+
   // Set # steps for momentum to be used to initialize octave arrays
   // It is the first entry of the nstepsOctave array
   nStepsOctave[0] = (int)allMoms.size();
@@ -222,7 +225,7 @@ void InterpolatedCrossSectionsOctave::BuildGrid(){
   }
     
   std::cout << "countVVEC: " << countVVEC << std::endl;
-  //std::cout << "v_vec at the end: " << (*v_vec) << std::endl; 
+  //std::cout << "v_reac at the end: " << (*v_reac) << std::endl; 
 
 }
 
@@ -268,7 +271,7 @@ Double_t InterpolatedCrossSectionsOctave::GetSplinedGridPoint(Int_t thisXSec, co
   in.append( octave_value("linear"));
 
   // Default value outside of the grid
-  in.append( octave_value(999));
+  in.append( octave_value(9999));
 
   // Evaluate command
   octave_value_list out_v_point = feval ("interpn",in,nPointsToInterp);
