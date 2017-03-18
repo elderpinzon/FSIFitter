@@ -29,7 +29,7 @@ TN032Envelopes::TN032Envelopes(TString Nuclei, Int_t pionType, TString iTypeStri
     // Get varied cross section
     varied = (TH1D*)fset->Get(Form("h%s",iTypeString.Data()));
     varied->SetLineColor(set);
-    varied->SetLineWidth(4);
+    //varied->SetLineWidth(4);
     varied->Smooth();
     if(varied->GetMaximum()*1.15 > kMaxScale) kMaxScale = varied->GetMaximum()*1.15;
     gr_varied = new TGraphErrors(varied);
@@ -61,12 +61,12 @@ TN032Envelopes::TN032Envelopes(TString Nuclei, Int_t pionType, TString iTypeStri
     
   }
   
-  gr_nom->SetLineColor(kMagenta+1);
-  gr_min->SetLineColor(kMagenta+1);
-  gr_max->SetLineColor(kMagenta+1);
+  gr_nom->SetLineColor(kAzure+2);
+  gr_min->SetLineColor(kAzure+2);
+  gr_max->SetLineColor(kAzure+2);
   // Merge graphs to form uncertainty band
   gr_shade = FSIFitterUtils::MergeGraphsIntoEnvelope(gr_min,gr_max);
-  gr_shade->SetFillColor(kMagenta+1);
-  gr_shade->SetFillStyle(3344);
+  gr_shade->SetFillColor(kAzure+2);
+  //gr_shade->SetFillStyle(3344);
   
 }
