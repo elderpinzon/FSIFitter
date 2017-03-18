@@ -100,7 +100,7 @@ void FSIFitterUtils::TurnIndexToParams(Int_t index, Double_t *kindex){
       
       // Take modulus
       kindex[i] = (Int_t)kindex[i] % factor_modulus;
-      printf("factor_modulus: %d kindex[%d]: %.2f\n",factor_modulus,i,kindex[i]);
+      //printf("factor_modulus: %d kindex[%d]: %.2f\n",factor_modulus,i,kindex[i]);
     }
     
     // Finally do division
@@ -110,7 +110,7 @@ void FSIFitterUtils::TurnIndexToParams(Int_t index, Double_t *kindex){
     }
     
     kindex[i] = (Int_t)kindex[i]/factor;
-    printf("factor: %d kindex[%d]: %.2f\n",factor,i,kindex[i]);
+    //printf("factor: %d kindex[%d]: %.2f\n",factor,i,kindex[i]);
 
     // Note: kindex is returned by reference
   }
@@ -238,8 +238,8 @@ TGraphErrors* FSIFitterUtils::MergeGraphsIntoEnvelope(TGraphErrors *gr_min, TGra
     
   }
   
-  gr_shade->SetFillStyle(3013);
-  gr_shade->SetFillColor(16);
+  // gr_shade->SetFillStyle(3013);
+  // gr_shade->SetFillColor(16);
   return gr_shade;
 
 }

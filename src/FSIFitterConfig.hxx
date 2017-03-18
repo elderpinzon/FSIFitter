@@ -9,11 +9,11 @@ const Int_t nFSIpars = 7;
 const Double_t nomPars[7] = {0.9,1.25,0.8,1.0,1.8,1.8,1.0};
 
 // Larger grid corresponding to scan_all_c_o_al_fe_cu_pb_170318.root
-const TString ScanFileName = "input/scan_all_c_o_al_fe_cu_pb_170318.root";
+const TString ScanFileName = "input/scan_all_larger_grid_031617.root";
 const Int_t nVariations = 17*17*16*13*11;
 const Int_t nSteps[7] = {17,17,16,13,11,7,7};
 const Double_t FSIParsMin[7]  = {0.10,0.35,0.10,0.20,0.80,1.20,0.70};
-const Double_t FSIParsMax[7]  = {1.70,1.951,1.60,2.60,2.80,2.40,1.30}; //1.551 is a trick
+const Double_t FSIParsMax[7]  = {1.70,1.95,1.60,2.60,2.80,2.40,1.30}; //1.551 is a trick
 const Double_t FSIParsStep[7] = {0.10,0.10,0.10,0.20,0.20,0.20,0.10};
 
 // // Smaller grid corresponding to scan_all_c_o_al_fe_cu_pb_extra_c.root
@@ -37,6 +37,7 @@ const std::vector<TString> iTypeString3 = {"Reactive","Quasi-Elastic","Absorptio
 const std::vector<Int_t> NucleiA = {6,8,13,26,29,82};
 const std::vector<TString> Nuclei = {"c","o","al","fe","cu","pb"};
 const std::vector<TString> Nuclei2 = {"c12","o","al","fe","cu","pb"};
+const std::vector<TString> NucleiFull = {"{}^{12}_{6}C","{}^{16}_{8}O","{}^{27}_{13}Al","{}^{56}_{26}Fe","{}^{63}_{29}Cu","{}^{207}_{82}Pb"};
 const std::vector<TString> pionLatex = {"#pi^{+}","#pi^{-}"};
 const std::vector<Int_t> pids = {211,-211};  
 const std::vector<TString> pionType = {"piP","piM"};
