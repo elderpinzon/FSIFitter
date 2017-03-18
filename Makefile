@@ -5,7 +5,8 @@ ROOTFLAGS=$(shell root-config --cflags)
 CFLAGS=-c -Wall -v -g -std=gnu++0x -O2 $(ROOTFLAGS)
 
 LDFLAGS=-g -O2 $(shell root-config --ldflags) -DVERBOSE
-LDLIBS=$(shell root-config --glibs) -lMinuit -lMathMore -lMinuit2 -std=gnu++0x
+#LDLIBS=$(shell root-config --glibs) -lMinuit -lMathMore -lMinuit2 -std=gnu++0x
+LDLIBS=$(shell root-config --glibs) -lMinuit -lMinuit2 -std=gnu++0x
 
 INCLUDE=-I$(shell root-config --incdir) -I./
 SOFLAGS=-fPIC -shared $(INCLUDE)
@@ -40,9 +41,7 @@ EXECUTABLE4=PlotResult
 MAIN5=MergeCovariances.cxx
 EXECUTABLE5=MergeCovariances
 
-#all: $(EXECUTABLE) $(EXECUTABLE2) $(EXECUTABLE3) $(EXECUTABLE4) $(LIBPISCAT)
-#all: $(EXECUTABLE) $(EXECUTABLE4) $(LIBPISCAT)
-all: $(EXECUTABLE) $(EXECUTABLE3) $(LIBPISCAT)
+all: $(EXECUTABLE) $(LIBPISCAT)
 
 ScatFit: $(MAIN) $(LIBPISCAT)
 	$(CXX) -o $@.exe $^ $(LDFLAGS) $(INCLUDE) $(LDLIBS) $(OCT_INCS) $(OCT_LIB_DIR) $(OCT_LIBS) -DVERBOSE
