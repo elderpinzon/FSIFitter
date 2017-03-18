@@ -29,6 +29,7 @@ void ParseArgs(int argc, char **argv){
     else if(std::string(argv[i]) == "-o") outputfileFit = (argv[i+1]);
     else if(std::string(argv[i]) == "-d") dataFit = atoi(argv[i+1]);
     else if(std::string(argv[i]) == "-f") nFitPars = atoi(argv[i+1]);
+    else if(std::string(argv[i]) == "-s") scalingFactor = atof(argv[i+1]);
     else {  
       std::cout << "Invalid argument:" << argv[i] << " "<< argv[i+1] << std::endl;
       Usage();
@@ -177,6 +178,7 @@ int main(int argc, char* argv[]){
   // of the interpolation, which is stored there
   FSIFitFCN fcn(aFSIChi2Grid);
   fcn.SetNPARS(nFSIparsFitted);
+  fcn.SetScalingFactor(scalingFactor);
 
   if(kOctave)
     fcn.SetOctaveInterpolation();

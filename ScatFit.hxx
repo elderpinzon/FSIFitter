@@ -16,6 +16,7 @@
 #include "TH2.h"
 #include "TF1.h"
 #include "TPaveText.h"
+#include "TPaveStats.h"
 #include "TStopwatch.h"
 #include "Minuit2/Minuit2Minimizer.h"
 #include "Math/Functor.h"
@@ -37,6 +38,7 @@
 #include "ThrowParms.hxx"
 #include "TN032Envelopes.hxx"
 #include "ModelPrediction.hxx"
+#include "InterpolatedCrossSectionsOctave.hxx"
 
 // Running options
 bool kBuildGridFromScratch = true; //default option
@@ -49,6 +51,7 @@ int kTotalPieces = -1;
 int dataFit = 0; // 0: {C}, 1: {C,Al,O}, 2:{C,O,Al,Fe,Cu,Pb}
 int nFitPars = 6;
 bool fitNorm = false;
+Double_t scalingFactor = 1.0;
 
 // Input file with MC scan
 std::string inputfileScan="";
@@ -70,6 +73,7 @@ FSIChi2GridNorm *aFSIChi2GridNorm;
 
 // Clock for time-keeping
 TStopwatch stopwatch;
+TStopwatch stopwatch_2;
 
 //***********************************************************************************
 // Define list of data sets to be added and compile them as ExternalDataSets
