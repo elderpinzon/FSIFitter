@@ -7,14 +7,15 @@
 //***********************************************************************************
 
 #include "ScatFit.hxx"
-#include "InterpolatedCrossSectionsOctave.hxx"
 
 int main(int argc, char* argv[]){
 
   gROOT->ProcessLine(".x ~/rootmaclogon.C");
 
+  TString outdir = "/home/elder/share/tmp/octave_xsec";
+
   bool drawModels = false;
-  bool drawTN032Envelopes = false;
+  bool drawTN032Envelopes = true;//false;
 
   // Read input best fit and covariance
   if(argc<2){
@@ -31,10 +32,10 @@ int main(int argc, char* argv[]){
   cov->Print();
   
   // Make output folder
-  gROOT->ProcessLine(Form(".! mkdir -p /home/elder/share/tmp/octave_xsec/%s",argv[1]));
+  gROOT->ProcessLine(Form(".! mkdir -p %s/%s",outdir.Data(),argv[1]));
 
   // Output file
-  TFile *fOut = new TFile(Form("/home/elder/share/tmp/octave_xsec/%s/plotting_summary.root",argv[1]),"RECREATE");
+  TFile *fOut = new TFile(Form("%s/%s/plotting_summary.root",outdir.Data(),argv[1]),"RECREATE");
 
   Int_t nXsecs = xsName.size();
   Int_t nNuclei = Nuclei.size();
@@ -68,13 +69,13 @@ int main(int argc, char* argv[]){
 
   // Histograms to store thrown parameter values and initialization
   TH1F *histoFSIThrows[npar];
-  TH1F *histoFSIThrowsOneSigma[npar];
+  TH1F *histoFSIThrowsUsed[npar];
   for(Int_t i = 0; i<npar; i++){
     histoFSIThrows[i] = new TH1F(parNames[i].Data(),
 				 Form("%s;Thrown Parameter",parNames[i].Data()),
 				 100,(*bestfit)[i]*0.3,(*bestfit)[i]*1.7);
     
-    histoFSIThrowsOneSigma[i] = new TH1F(Form("%s-1sigma",parNames[i].Data()),
+    histoFSIThrowsUsed[i] = new TH1F(Form("%s-used",parNames[i].Data()),
 					 Form("%s;Thrown Parameter",parNames[i].Data()),
 					 100,(*bestfit)[i]*0.3,(*bestfit)[i]*1.7);
   }
@@ -134,7 +135,7 @@ int main(int argc, char* argv[]){
   
   // How many valid throws to do?
   // Note: Throws outside the grid are not counted
-  Int_t nthrows = 250;
+  Int_t nthrows = 1000;
   Int_t nOutside = 0;
   Int_t tt = 0;
   
@@ -162,7 +163,7 @@ int main(int argc, char* argv[]){
 	params.push_back(thrownPars[i]);
 
 	histoFSIThrows[i]->Fill(thrownPars[i]);
-	
+	printf("%s: min:%.4f throw:%.4f max: %.4f\n",parNames[i].Data(),FSIParsMin[i],thrownPars[i],FSIParsMax[i]);
 	// Check if thrown parameter is inside the Grid
 	if(thrownPars[i] < FSIParsMin[i] || thrownPars[i] > FSIParsMax[i]){
 	  
@@ -187,7 +188,7 @@ int main(int argc, char* argv[]){
     
 
     for(Int_t i = 0; i<(Int_t)thrownPars.size(); i++){
-      histoFSIThrowsOneSigma[i]->Fill(thrownPars[i]);
+      histoFSIThrowsUsed[i]->Fill(thrownPars[i]);
     }
 
     for(Int_t iNuclei = 0; iNuclei <(Int_t)Nuclei.size(); iNuclei++){
@@ -201,15 +202,20 @@ int main(int argc, char* argv[]){
 	    
 	    // The first entry should be the momentum
 	    params[0] = allMoms[i];
+	    stopwatch_2.Start();
 	    Double_t out = aInterpolatedCrossSection[iNuclei][ipid]->GetSplinedGridPoint(iType+1,params);
+	    stopwatch_2.Stop();
 	    gxsecsOct->SetPoint(i,allMoms[i],out);
 	    std::cout << " Nuclei: " << NucleiA[iNuclei]
 		      << " pid: " << pids[ipid]
 		      << " type: " << iType
 		      << " mom: " << allMoms[i]
 		      << " mc: " << out
+		      << ". Took " << stopwatch_2.RealTime() << " seconds."
 		      << std::endl;
-
+	    if(out == 9999)
+	      std::exit(1);
+	    
 	    // Draw best fit
 	    if(tt == 0){
 	    
@@ -244,8 +250,8 @@ int main(int argc, char* argv[]){
   // Fit PDFs and fill TGraphs with  \pm 1-\sigma envelopes
   // Also calculate  (nom-data)/sqrt(th*th + exp*exp) for error inflation
   TH1F *mcDataCompatibility = new TH1F("mcDataCompatibility",
-				       "Data-MC compatibility;(nom-data)/sqrt(th*th+exp*exp)"
-				       ,60,-3.0,3.0);
+				       "Data-MC compatibility;(Best fit - Data)/(th*th+exp*exp)^{1/2};Numer of Data points"
+				       ,26,-5.0,5.0);
 
   for(Int_t iNuclei = 0; iNuclei <(Int_t)Nuclei.size(); iNuclei++){
       
@@ -320,8 +326,8 @@ int main(int argc, char* argv[]){
   TCanvas *c_mcDataCompatibility = new TCanvas();
   c_mcDataCompatibility->cd();
   mcDataCompatibility->Draw();
-  c_mcDataCompatibility->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/mcDataCompatibility.png",argv[1]));
-  c_mcDataCompatibility->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/mcDataCompatibility.eps",argv[1]));
+  c_mcDataCompatibility->SaveAs(Form("%s/%s/mcDataCompatibility.png",outdir.Data(),argv[1]));
+  c_mcDataCompatibility->SaveAs(Form("%s/%s/mcDataCompatibility.eps",outdir.Data(),argv[1]));
 
   fOut->cd();
   mcDataCompatibility->Write();
@@ -398,7 +404,7 @@ int main(int argc, char* argv[]){
 	merged->Sort();	
 
 	c_reac[iNuclei][ipid][iType]= new TCanvas(Form("%s_%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()),Form("%s-%s %s",pionLatex[ipid].Data(),Nuclei[iNuclei].Data(),iTypeString[iType].Data()));
-	const char* hTemplateTitle = Form("%s-%s %s",pionLatex[ipid].Data(),Nuclei[iNuclei].Data(),iTypeString3[iType].Data());
+	const char* hTemplateTitle = Form("%s %s %s",pionLatex[ipid].Data(),NucleiFull[iNuclei].Data(),iTypeString3[iType].Data());
 	TH1F *hTemplate = new TH1F(hTemplateTitle,Form("%s;Momentum[MeV/c];#sigma[mb]",hTemplateTitle),10,0,2000);
 	
 	TN032Envelopes *tn032Envel = new TN032Envelopes (Nuclei[iNuclei],pionCode[ipid],iTypeString[iType]);
@@ -437,8 +443,8 @@ int main(int argc, char* argv[]){
 
 	merged->Draw("Psame");
 
-	c_reac[iNuclei][ipid][iType]->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/%s_%s_%s.png",argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()));
-	c_reac[iNuclei][ipid][iType]->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/%s_%s_%s.eps",argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()));
+	c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s/%s/%s_%s_%s.png",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()));
+	c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s/%s/%s_%s_%s.eps",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()));
 
 	// Draw composite 'c_all' histogram
 	c_all[iNuclei][ipid]->cd(iType+1);
@@ -462,17 +468,17 @@ int main(int argc, char* argv[]){
 
 	//hTrue[iType]->Draw("samehist");
 
-	gr_bestfitOct[iNuclei][ipid][iType]->Draw("Csame");
-	gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
-	gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
-
-	merged->Draw("Psame");
-
 	// Create shade from the min and max histos
 	gr_shadeOct[iNuclei][ipid][iType] = FSIFitterUtils::MergeGraphsIntoEnvelope(gr_minOct[iNuclei][ipid][iType],gr_maxOct[iNuclei][ipid][iType]);
-	gr_shadeOct[iNuclei][ipid][iType]->SetFillColor(2);
+	gr_shadeOct[iNuclei][ipid][iType]->SetFillColor(kRed+1);
 	//gr_shadeOct[iNuclei][ipid][iType]->SetFillStyle(3344);
+	gr_shadeOct[iNuclei][ipid][iType]->Draw("fsame");
 
+	gr_bestfitOct[iNuclei][ipid][iType]->Draw("Csame");
+	// gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
+	// gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
+
+	merged->Draw("Psame");
 
 	//Store envelopes to files here
 	fOut->cd();
@@ -489,20 +495,20 @@ int main(int argc, char* argv[]){
 
       }
 
+
+      TPaveText *pt = new TPaveText(0.15,0.15,0.95,.87);
+
+      pt->AddText("FSIFitter best fit");
+      pt->AddText("FSIFitter #pm1#sigma band");
+      pt->GetLineWith("FSIFitter #pm")->SetTextColor(kRed+1);
+
+      if(drawTN032Envelopes){
+	pt->AddText("TN-032 #pm1#sigma band");
+	pt->GetLineWith("TN-032")->SetTextColor(kAzure+2);
+      }
+
       if(drawModels){
 	// Draw box with legend
-	c_all[iNuclei][ipid]->cd(6);
-	TPaveText *pt = new TPaveText(0.15,0.15,0.95,.87);
-	pt->AddText("Cascade Models");
-	pt->AddLine(.0,0.87,0,0.87);
-	// pt->AddText("NEUT with current #pm1#sigma band");
-	// pt->GetLineWith("NEUT with")->SetTextColor(kMagenta+1);
-	pt->AddText("NEUT");
-	pt->GetLineWith("NEUT")->SetTextColor(kMagenta+1);
-	if(drawTN032Envelopes){
-	  pt->AddText("NEUT new #pm1#sigma band");
-	  pt->GetLineWith("NEUT new")->SetTextColor(kCyan+1);
-	}
 	if(drawModels){
 	  pt->AddText("Geant4 Bertini");
 	  pt->GetLineWith("Geant4")->SetTextColor(kBlack);
@@ -517,11 +523,15 @@ int main(int argc, char* argv[]){
 	  pt->AddText("FLUKA");
 	  pt->GetLineWith("FLUKA")->SetTextColor(kCyan);//+10);
 	}
+
+	c_all[iNuclei][ipid]->cd(6);
 	pt->Draw();//"same");
       }
-	  
-      c_all[iNuclei][ipid]->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/%s_%s_all.png",argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
-      c_all[iNuclei][ipid]->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/%s_%s_all.eps",argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
+      
+      fOut->cd();
+      c_all[iNuclei][ipid]->Write();
+      c_all[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all.png",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
+      c_all[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all.eps",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
 
     }
   }
@@ -530,25 +540,27 @@ int main(int argc, char* argv[]){
   
   
   // Draw and store throw histograms
-  TCanvas *c_throws = new TCanvas("c_throws","c_throws",1800,600);
+  TCanvas *c_throws = new TCanvas("c_throws","c_throws",2400,1200);
   c_throws->Divide(3,2);
   for(Int_t j = 0; j<npar; j++){
     c_throws->cd(j+1);
     //gStyle->SetOptStat(0111);
     gStyle->SetOptFit();
+    histoFSIThrows[j]->SetLineWidth(1);
     histoFSIThrows[j]->Fit("gaus");
+    histoFSIThrowsUsed[j]->SetLineWidth(1);
+    histoFSIThrowsUsed[j]->SetLineColor(2);
+    histoFSIThrowsUsed[j]->Fit("gaus");
     histoFSIThrows[j]->Draw();
-    histoFSIThrowsOneSigma[j]->SetLineColor(2);
-    histoFSIThrowsOneSigma[j]->Draw("same");
+    histoFSIThrowsUsed[j]->Draw("same");
     fOut->cd();
     histoFSIThrows[j]->Write();
-    histoFSIThrowsOneSigma[j]->Write();
+    histoFSIThrowsUsed[j]->Write();
   }
   
-  c_throws->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/throw.png",argv[1]));
-  c_throws->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/throw.eps",argv[1]));
+  c_throws->SaveAs(Form("%s/%s/throws.png",outdir.Data(),argv[1]));
+  c_throws->SaveAs(Form("%s/%s/throws.eps",outdir.Data(),argv[1]));
 
-  fOut->Write();
   c_throws->Write();
 
   fOut->Close();
