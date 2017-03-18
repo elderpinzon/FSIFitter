@@ -14,6 +14,14 @@ FSIFitFCN::FSIFitFCN(FSIChi2Grid *aFSIChi2Grid): fFSIChi2Grid(aFSIChi2Grid){
   
 }
 
+void FSIFitFCN::SetScalingFactor(Double_t factor){
+  
+  scalingFactor = factor;
+  std::cout << "FSIFitFCN::SetScalingFactor: " << scalingFactor << std::endl;
+  
+};
+
+
 double FSIFitFCN::operator() (const std::vector<double> &x) const {
   
   // Print the parameters to follow progression of the minimization
