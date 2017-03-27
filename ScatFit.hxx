@@ -18,6 +18,7 @@
 #include "TPaveText.h"
 #include "TPaveStats.h"
 #include "TStopwatch.h"
+#include "TLatex.h"
 #include "Minuit2/Minuit2Minimizer.h"
 #include "Math/Functor.h"
 
