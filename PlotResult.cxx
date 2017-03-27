@@ -37,6 +37,7 @@ int main(int argc, char* argv[]){
   // Output file
   TFile *fOut = new TFile(Form("%s/%s/plotting_summary.root",outdir.Data(),argv[1]),"RECREATE");
 
+  // By default do all nuclei, polarities, and interaction channels
   Int_t nXsecs = xsName.size();
   Int_t nNuclei = Nuclei.size();
   Int_t nPID = pionType.size();
@@ -108,7 +109,7 @@ int main(int argc, char* argv[]){
 
   // Initialize splined cross sections
   InterpolatedCrossSectionsOctave *aInterpolatedCrossSection[6][2];
-  for(Int_t iNuclei = 0; iNuclei < (Int_t)NucleiA.size(); iNuclei++){
+  for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
     for(Int_t ipid = 0; ipid < (Int_t)pids.size(); ipid++){
       
       aInterpolatedCrossSection[iNuclei][ipid] = new InterpolatedCrossSectionsOctave(ScanFileName,NucleiA[iNuclei],pids[ipid]);
@@ -191,7 +192,7 @@ int main(int argc, char* argv[]){
       histoFSIThrowsUsed[i]->Fill(thrownPars[i]);
     }
 
-    for(Int_t iNuclei = 0; iNuclei <(Int_t)Nuclei.size(); iNuclei++){
+    for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
       for(Int_t ipid = 0; ipid < (Int_t)pids.size(); ipid++){
 	for(Int_t iType = 0; iType<nXsecs; iType++){
 	  
@@ -206,13 +207,13 @@ int main(int argc, char* argv[]){
 	    Double_t out = aInterpolatedCrossSection[iNuclei][ipid]->GetSplinedGridPoint(iType+1,params);
 	    stopwatch_2.Stop();
 	    gxsecsOct->SetPoint(i,allMoms[i],out);
-	    std::cout << " Nuclei: " << NucleiA[iNuclei]
-		      << " pid: " << pids[ipid]
-		      << " type: " << iType
-		      << " mom: " << allMoms[i]
-		      << " mc: " << out
-		      << ". Took " << stopwatch_2.RealTime() << " seconds."
-		      << std::endl;
+	    // std::cout << " Nuclei: " << NucleiA[iNuclei]
+	    // 	      << " pid: " << pids[ipid]
+	    // 	      << " type: " << iType
+	    // 	      << " mom: " << allMoms[i]
+	    // 	      << " mc: " << out
+	    // 	      << ". Took " << stopwatch_2.RealTime() << " seconds."
+	    // 	      << std::endl;
 	    if(out == 9999)
 	      std::exit(1);
 	    
@@ -253,7 +254,7 @@ int main(int argc, char* argv[]){
 				       "Data-MC compatibility;(Best fit - Data)/(th*th+exp*exp)^{1/2};Numer of Data points"
 				       ,26,-5.0,5.0);
 
-  for(Int_t iNuclei = 0; iNuclei <(Int_t)Nuclei.size(); iNuclei++){
+  for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
       
     for(Int_t ipid = 0; ipid<2; ipid++){
     
@@ -284,7 +285,12 @@ int main(int argc, char* argv[]){
 	  // Get mean and sigma
 	  Double_t mean = xsPDFs[iNuclei][ipid][iType][i]->GetFunction("gaus")->GetParameter(1);
 	  Double_t sigma = xsPDFs[iNuclei][ipid][iType][i]->GetFunction("gaus")->GetParameter(2);
-	  std::cout << "Mean: " << mean << " sigma: " << sigma << std::endl;      
+	  Double_t bestfit = gr_bestfitOct[iNuclei][ipid][iType]->Eval(allMoms[i]);
+	  std::cout << "Bestfit: " << bestfit << " Mean: " << mean << " sigma: " << sigma << std::endl;
+
+	  // Just check that the mean of the PDF is indeed close to the best fit
+	  if(TMath::Abs(bestfit-mean)/bestfit > 0.05)
+	    std::cout << "Warning more than 5% difference" << std::endl;
 
 	  // Set envelopes
 	  gr_minOct[iNuclei][ipid][iType]->SetPoint(i,allMoms[i],mean-sigma);
@@ -337,7 +343,8 @@ int main(int argc, char* argv[]){
   ////////////////////////////////////////////////////
 
   TCanvas *c_reac[6][2][nXsecs]; //[Nuclei][pionType][intrType]
-  TCanvas *c_all[6][2]; //[Nuclei][pionType]
+  TCanvas *c_all[6][2]; //[Nuclei][pionType
+  TCanvas *c_all_ratio[6][2]; //[Nuclei][pionType]
   Int_t counter = 0;
 
   // Load model predictions from other generators
@@ -364,12 +371,14 @@ int main(int argc, char* argv[]){
   fluka.SetGeVtoMeV();
   fluka.SetLineColor(kCyan);//Orange+10);
     
-  for(Int_t iNuclei = 0; iNuclei <(Int_t)Nuclei.size(); iNuclei++){
+  for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
   
     for(Int_t ipid = 0; ipid<2; ipid++){
       
       c_all[iNuclei][ipid] = new TCanvas(Form("%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data()),Form("%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data()),2400,1200);
       c_all[iNuclei][ipid]->Divide(3,2);
+
+      c_all_ratio[iNuclei][ipid] = new TCanvas(Form("%s_%s_ratio",Nuclei[iNuclei].Data(),pionType[ipid].Data()),Form("%s_%s_ratio",Nuclei[iNuclei].Data(),pionType[ipid].Data()),1000,1600);
       
       for(Int_t iType = 0; iType <nXsecs; iType++){
 
@@ -405,7 +414,7 @@ int main(int argc, char* argv[]){
 
 	c_reac[iNuclei][ipid][iType]= new TCanvas(Form("%s_%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()),Form("%s-%s %s",pionLatex[ipid].Data(),Nuclei[iNuclei].Data(),iTypeString[iType].Data()));
 	const char* hTemplateTitle = Form("%s %s %s",pionLatex[ipid].Data(),NucleiFull[iNuclei].Data(),iTypeString3[iType].Data());
-	TH1F *hTemplate = new TH1F(hTemplateTitle,Form("%s;Momentum[MeV/c];#sigma[mb]",hTemplateTitle),10,0,2000);
+	TH1F *hTemplate = new TH1F(hTemplateTitle,Form("%s;Momentum [MeV/c];#sigma [mb]",hTemplateTitle),10,0,2000);
 	
 	TN032Envelopes *tn032Envel = new TN032Envelopes (Nuclei[iNuclei],pionCode[ipid],iTypeString[iType]);
 
@@ -480,6 +489,65 @@ int main(int argc, char* argv[]){
 
 	merged->Draw("Psame");
 
+	// Draw composite c_all_ratio
+	c_all_ratio[iNuclei][ipid]->cd();
+	const char* hTemplateTitleRatio = Form("%s_ratio",hTemplateTitle);
+	TH1F *hTemplateRatio = new TH1F(hTemplateTitleRatio,Form(";Momentum [MeV/c];#sigma_{%s}/#sigma_{%s, Best fit}",xsName[iType].Data(),xsName[iType].Data()),10,0,2000);
+	hTemplateRatio->SetLineColor(0);
+	hTemplateRatio->GetYaxis()->SetTitleOffset(0.5);
+	hTemplateRatio->GetYaxis()->SetTitleSize(0.1);
+	hTemplateRatio->GetYaxis()->SetLabelSize(0.06);
+	hTemplateRatio->GetXaxis()->SetTitleSize(0.07);
+	hTemplateRatio->GetXaxis()->SetLabelSize(0.06);
+	hTemplateRatio->GetYaxis()->SetRangeUser(0,2.0);
+
+	TPad *pad = new TPad("pad", "pad", 0, 1.0 - (iType+1)*0.2, 1, 1.0 - iType*0.2);
+	pad->SetLeftMargin(0.1);
+	if(iType != 4) pad->SetBottomMargin(0); // Upper and lower plot are joined
+	if(iType != 0) pad->SetTopMargin(0);
+	pad->Draw();
+	pad->cd();
+	
+	hTemplateRatio->Draw();
+
+	// TGraphError with ratio band
+	TGraphErrors *gr_shadeOctRatio = new TGraphErrors(gr_shadeOct[iNuclei][ipid][iType]->GetN());
+	Double_t *nxShade = gr_shadeOct[iNuclei][ipid][iType]->GetX();
+        Double_t *nyShade = gr_shadeOct[iNuclei][ipid][iType]->GetY();
+	for(Int_t imom = 0; imom < gr_shadeOct[iNuclei][ipid][iType]->GetN(); imom++){
+	  
+	  Double_t bestfit = gr_bestfitOct[iNuclei][ipid][iType]->Eval(nxShade[imom]);
+	  Double_t ratio = nyShade[imom]/bestfit;
+	  gr_shadeOctRatio->SetPoint(imom,nxShade[imom],ratio);
+	}
+	gr_shadeOctRatio->SetFillColor(kRed+1);
+	gr_shadeOctRatio->Draw("fsame");
+	
+	// TGraphErrors with ratio of data points to best fit
+	TGraphErrors *merged_ratio = new TGraphErrors(merged->GetN());
+	merged_ratio->SetMarkerStyle(kCircle);
+	merged_ratio->SetMarkerSize(1.6);
+	merged->Sort();	
+
+	Double_t *nx = merged->GetX();
+	Double_t *ny = merged->GetY();
+
+	for(Int_t point = 0; point < merged->GetN(); point++){
+	  
+	  Double_t bestfit = gr_bestfitOct[iNuclei][ipid][iType]->Eval(nx[point]);
+	  Double_t ratio = ny[point]/bestfit;
+	  merged_ratio->SetPoint(point,nx[point],ratio);
+	  Double_t ratio_error = merged->GetErrorY(point)/bestfit;
+	  merged_ratio->SetPointError(point,0,ratio_error);
+	  	  
+	}
+	merged_ratio->Draw("Psame");
+
+	const char* latexTitle = Form("%s %s %s",pionLatex[ipid].Data(),NucleiFull[iNuclei].Data(),xsName[iType].Data());
+	TLatex *l = new TLatex(0.7,0.8,latexTitle);
+	l->SetNDC();
+	l->Draw("same");
+
 	//Store envelopes to files here
 	fOut->cd();
 	char *title = Form("%s_%s_%s",
@@ -491,6 +559,9 @@ int main(int argc, char* argv[]){
         gr_minOct[iNuclei][ipid][iType]->Write(Form("gr_minOct_%s",title));
         gr_maxOct[iNuclei][ipid][iType]->Write(Form("gr_maxOct_%s",title));
         gr_shadeOct[iNuclei][ipid][iType]->Write(Form("gr_shadeOct_%s",title));
+	gr_shadeOctRatio->Write(Form("gr_shadeOctRatio_%s",title));
+	merged->Write(Form("data_%s",title));
+	merged_ratio->Write(Form("dataRatio_%s",title));
 	delete collection;	  
 
       }
@@ -532,6 +603,9 @@ int main(int argc, char* argv[]){
       c_all[iNuclei][ipid]->Write();
       c_all[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all.png",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
       c_all[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all.eps",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
+
+      c_all_ratio[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all_ratio.png",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
+      c_all_ratio[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all_ratio.eps",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
 
     }
   }
