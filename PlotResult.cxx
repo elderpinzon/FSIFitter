@@ -54,8 +54,10 @@ int main(int argc, char* argv[]){
     hTrue[i]->SetLineColor(4);
   }
 
-  // Link correct folder with pion_data selection
-  gROOT->ProcessLine(".! ln -s pion_data_plots pion_data");
+  // Hack to have ExternalDataSets defined separately for ABS and CX DUET measurements
+  gROOT->ProcessLine(".! mkdir -p pion_data/notused");
+  gROOT->ProcessLine(".! mv pion_data/c_abscx_piP_DUETSeparate.csv pion_data/notused/");
+  gROOT->ProcessLine(".! mv pion_data/notused/c_{abs,cx}_piP_DUETSeparated.csv pion_data/");
 
   // Add all data sets
   AddDataSets("c_");
@@ -74,11 +76,11 @@ int main(int argc, char* argv[]){
   for(Int_t i = 0; i<npar; i++){
     histoFSIThrows[i] = new TH1F(parNames[i].Data(),
 				 Form("%s;Thrown Parameter",parNames[i].Data()),
-				 100,(*bestfit)[i]*0.3,(*bestfit)[i]*1.7);
+				 100,FSIParsMin[i],FSIParsMax[i]);
     
     histoFSIThrowsUsed[i] = new TH1F(Form("%s-used",parNames[i].Data()),
-					 Form("%s;Thrown Parameter",parNames[i].Data()),
-					 100,(*bestfit)[i]*0.3,(*bestfit)[i]*1.7);
+				     Form("%s;Thrown Parameter",parNames[i].Data()),
+				     100,FSIParsMin[i],FSIParsMax[i]);
   }
 
   // Max scales for plotting each histogram (horrible)
@@ -251,8 +253,10 @@ int main(int argc, char* argv[]){
   // Fit PDFs and fill TGraphs with  \pm 1-\sigma envelopes
   // Also calculate  (nom-data)/sqrt(th*th + exp*exp) for error inflation
   TH1F *mcDataCompatibility = new TH1F("mcDataCompatibility",
-				       "Data-MC compatibility;(Best fit - Data)/(th*th+exp*exp)^{1/2};Numer of Data points"
+				       "Data-MC compatibility;(Best fit - Data)/#delta_{Best fit};Numer of Data points"
 				       ,26,-5.0,5.0);
+
+  Int_t PointsOutside = 0;
 
   for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
       
@@ -310,16 +314,21 @@ int main(int argc, char* argv[]){
 		 TMath::Abs(AllDataSets[dataset].GetMomVector()[point] - allMoms[i]) < 0.1){
 		
 		
-		Double_t comparison = (mean - AllDataSets[dataset].GetXsecVector()[point]) / TMath::Sqrt(sigma*sigma + AllDataSets[dataset].GetXsecErrorVector()[point] * AllDataSets[dataset].GetXsecErrorVector()[point]);
+		Double_t comparison = (mean - AllDataSets[dataset].GetXsecVector()[point]) / TMath::Sqrt(sigma*sigma);// + AllDataSets[dataset].GetXsecErrorVector()[point] * AllDataSets[dataset].GetXsecErrorVector()[point]);
 		mcDataCompatibility->Fill(comparison);
-		printf("A: %d p: %d int: %d mom: %.2f xsec: %.2f err: %.2f mean: %.2f sigma: %.2f comp :%.4f\n",
+		Bool_t outside = false;
+		if(TMath::Abs(AllDataSets[dataset].GetXsecVector()[point] - mean) > sigma){
+		  PointsOutside++;
+		  outside = true;
+		}
+		printf("A: %d p: %d int: %d mom: %.2f xsec: %.2f err: %.2f mean: %.2f sigma: %.2f comp :%.4f outside %d\n",
 		       AllDataSets[dataset].GetNucleus(),
 		       AllDataSets[dataset].GetPionType(),
 		       AllDataSets[dataset].GetIntrType(),
 		       AllDataSets[dataset].GetMomVector()[point],
 		       AllDataSets[dataset].GetXsecVector()[point],
 		       AllDataSets[dataset].GetXsecErrorVector()[point],
-		       mean, sigma, comparison);
+		       mean, sigma, comparison,outside);
 		
 	      }
 	    }
@@ -328,6 +337,8 @@ int main(int argc, char* argv[]){
       }
     }
   }
+
+  std::cout << "------> Data points outside envelope: " << PointsOutside << std::endl;
 
   TCanvas *c_mcDataCompatibility = new TCanvas();
   c_mcDataCompatibility->cd();
@@ -446,9 +457,15 @@ int main(int argc, char* argv[]){
 	//hTrue[iType]->Draw("samehist");
 	
 	//gr_bestfit[iNuclei][ipid][iType]->Draw("Csame");
+
+	// Create shade from the min and max histos
+	gr_shadeOct[iNuclei][ipid][iType] = FSIFitterUtils::MergeGraphsIntoEnvelope(gr_minOct[iNuclei][ipid][iType],gr_maxOct[iNuclei][ipid][iType]);
+	gr_shadeOct[iNuclei][ipid][iType]->SetFillColor(kRed+1);
+	//gr_shadeOct[iNuclei][ipid][iType]->SetFillStyle(3344);
+	gr_shadeOct[iNuclei][ipid][iType]->Draw("fsame");
 	gr_bestfitOct[iNuclei][ipid][iType]->Draw("Csame");
-	gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
-	gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
+	// gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
+	// gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
 
 	merged->Draw("Psame");
 
@@ -477,12 +494,7 @@ int main(int argc, char* argv[]){
 
 	//hTrue[iType]->Draw("samehist");
 
-	// Create shade from the min and max histos
-	gr_shadeOct[iNuclei][ipid][iType] = FSIFitterUtils::MergeGraphsIntoEnvelope(gr_minOct[iNuclei][ipid][iType],gr_maxOct[iNuclei][ipid][iType]);
-	gr_shadeOct[iNuclei][ipid][iType]->SetFillColor(kRed+1);
-	//gr_shadeOct[iNuclei][ipid][iType]->SetFillStyle(3344);
 	gr_shadeOct[iNuclei][ipid][iType]->Draw("fsame");
-
 	gr_bestfitOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
