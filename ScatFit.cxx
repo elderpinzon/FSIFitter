@@ -56,7 +56,11 @@ int main(int argc, char* argv[]){
   
   if(kOctave) std::cout << "Octave" << std::endl;
   else std::cout << "TMultiDimFit" << std::endl;
-  
+
+  // Hack to have a single ExternalDataSet defined for the separate ABS and CX DUET measurement
+  gROOT->ProcessLine(".! mkdir -p pion_data/notused");
+  gROOT->ProcessLine(".! mv pion_data/c_{abs,cx}_piP_DUETSeparated.csv pion_data/notused/");
+  gROOT->ProcessLine(".! mv pion_data/not_used/c_abscx_piP_DUETSeparate.csv pion_data/");  
   // Set data sets to be used. Will be added to AllDataSets vector
   if(dataFit == 0){
     AddDataSets("c_");
