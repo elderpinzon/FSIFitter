@@ -8,34 +8,72 @@
 
 #include "ScatFit.hxx"
 
+Int_t nThrows = -1;
+TString inputFile = "";
+Bool_t drawModels = false;
+
+// Print the cmd line syntax
+void Usage(){
+  std::cout << "Cmd line syntax should be:" << std::endl;
+  std::cout << "./PlotResult.exe -i inputFile (OPTIONAL -n throws -o outputFile)" << std::endl;
+}
+
+//***********************************************************************************
+// Parse the arguments for running the fit
+//***********************************************************************************
+void ParseArgs(int argc, char **argv){
+
+  std::cout << "Parsing arguments ";
+  
+  int nargs = 1; 
+  if(argc<(nargs*2+1)){ Usage(); exit(1); }
+  for(int i = 1; i < argc; i+=2){
+    if(std::string(argv[i]) == "-o") outputfileFit = (argv[i+1]);
+    else if(std::string(argv[i]) == "-n") nThrows = atoi(argv[i+1]);
+    else if(std::string(argv[i]) == "-i") inputFile = argv[i+1];
+    else if(std::string(argv[i]) == "-m") drawModels = atoi(argv[i+1]);
+    else {  
+      std::cout << "Invalid argument:" << argv[i] << " "<< argv[i+1] << std::endl;
+      Usage();
+      exit(1);
+    }
+  } 
+}
+
 int main(int argc, char* argv[]){
-
+  
+  ParseArgs(argc,argv);
+  
   gROOT->ProcessLine(".x ~/rootmaclogon.C");
-
+  
   TString outdir = "/home/elder/share/tmp/octave_xsec";
-
-  bool drawModels = false;
+  
   bool drawTN032Envelopes = true;//false;
 
-  // Read input best fit and covariance
-  if(argc<2){
-    std::cout << "Usage: ./PlotResult.exe input-file.root" << std::endl;
-    std::exit(1);
-  }
+  TFile *fin = new TFile(inputFile,"OPEN");
 
-  TFile *fin = new TFile(argv[1],"OPEN");
-  TMatrixDSym *cov = (TMatrixDSym*)fin->Get("cov");
-  TVectorD *bestfit = (TVectorD*)fin->Get("BestFitPars");
-  std::cout << "Plotting envelopes from following FSI covariance in file: "
-	    << argv[1]
-	    << std::endl;
-  cov->Print();
+  // If doing throws, get a covariance matrix
+  TMatrixDSym *cov = NULL;
+  TVectorD *bestfit = NULL;
+  if(nThrows > 0){
+    cov = (TMatrixDSym*)fin->Get("cov");
+    bestfit = (TVectorD*)fin->Get("BestFitPars");
+    std::cout << "Plotting envelopes from following FSI covariance in file: "
+	      << inputFile
+	      << std::endl;
+    if(!cov){
+      std::cout << "Fatal Error: did not find an FSI covariance inside "
+		<< inputFile << std::endl;
+      throw;
+    }
+    cov->Print();
+  }
   
   // Make output folder
-  gROOT->ProcessLine(Form(".! mkdir -p %s/%s",outdir.Data(),argv[1]));
+  gROOT->ProcessLine(Form(".! mkdir -p %s/%s",outdir.Data(),inputFile.Data()));
 
   // Output file
-  TFile *fOut = new TFile(Form("%s/%s/plotting_summary.root",outdir.Data(),argv[1]),"RECREATE");
+  TFile *fOut = new TFile(Form("%s/%s/plotting_summary.root",outdir.Data(),inputFile.Data()),"RECREATE");
 
   // By default do all nuclei, polarities, and interaction channels
   Int_t nXsecs = xsName.size();
@@ -92,6 +130,7 @@ int main(int argc, char* argv[]){
   TGraphErrors *gr_minOct[nNuclei][nPID][nXsecs];
   TGraphErrors *gr_maxOct[nNuclei][nPID][nXsecs];
   TGraphErrors *gr_shadeOct[nNuclei][nPID][nXsecs];
+  TGraphErrors *gr_shadeOctRatio[nNuclei][nPID][nXsecs];
   
   // Histos to build xs PDFS on each bin which are then fitted to get 1-sigma envelope
   TH1D *xsPDFs[nNuclei][nPID][nXsecs][nMaxMomenta];
@@ -99,37 +138,62 @@ int main(int argc, char* argv[]){
 
   // ThrowParms does the Cholesky decompostion of the covariance matrix
   // and gets ready to throw a set of correlated random parameters
-  ThrowParms *throwObject;
-  throwObject = new ThrowParms((*bestfit),(*cov));
-  throwObject->SetSeed(1000);
+  ThrowParms *throwObject = NULL;
+  if(nThrows > 0){
+    throwObject = new ThrowParms((*bestfit),(*cov));
+    throwObject->SetSeed(1000);
 
-  // Octave engine initialization
-  string_vector argv_oct (2);
-  argv_oct(0) = "FSIOctaveInterpolation";
-  argv_oct(1) = "-q";
-  octave_main (2, argv_oct.c_str_vec (), 1);
+    // Octave engine initialization
+    string_vector argv_oct (2);
+    argv_oct(0) = "FSIOctaveInterpolation";
+    argv_oct(1) = "-q";
+    octave_main (2, argv_oct.c_str_vec (), 1);
+  }
 
   // Initialize splined cross sections
   InterpolatedCrossSectionsOctave *aInterpolatedCrossSection[6][2];
   for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
     for(Int_t ipid = 0; ipid < (Int_t)pids.size(); ipid++){
+
+      // If doing throws, load cross section octave objects
+      if(nThrows > 0){
       
-      aInterpolatedCrossSection[iNuclei][ipid] = new InterpolatedCrossSectionsOctave(ScanFileName,NucleiA[iNuclei],pids[ipid]);
-      aInterpolatedCrossSection[iNuclei][ipid]->BuildGrid();
-      
-      // Initialize TGraphs here
-      for(Int_t iXsec = 0; iXsec<nXsecs; iXsec++){
+	aInterpolatedCrossSection[iNuclei][ipid] = new InterpolatedCrossSectionsOctave(ScanFileName,NucleiA[iNuclei],pids[ipid]);
+	aInterpolatedCrossSection[iNuclei][ipid]->BuildGrid();
 	
-	Int_t nMom = aInterpolatedCrossSection[iNuclei][ipid]->GetNumberMomenta();
+	// Initialize TGraphs here
+	for(Int_t iXsec = 0; iXsec<nXsecs; iXsec++){
+	  
+	  Int_t nMom = aInterpolatedCrossSection[iNuclei][ipid]->GetNumberMomenta();
+	  
+	  gr_bestfitOct[iNuclei][ipid][iXsec] = new TGraphErrors(nMom);
+	  gr_minOct[iNuclei][ipid][iXsec] = new TGraphErrors(nMom);
+	  gr_maxOct[iNuclei][ipid][iXsec] = new TGraphErrors(nMom);
+	  gr_shadeOct[iNuclei][ipid][iXsec] = new TGraphErrors(2*nMom);
+	  gr_shadeOctRatio[iNuclei][ipid][iXsec] = new TGraphErrors(2*nMom);
+	  
+	  gr_minOct[iNuclei][ipid][iXsec]->SetLineColor(kGreen+2);
+	  gr_maxOct[iNuclei][ipid][iXsec]->SetLineColor(kGreen+2);
+	  
+	}
+      }
+      // If not doing throws, read in from file
+      else{
 	
-	gr_bestfitOct[iNuclei][ipid][iXsec] = new TGraphErrors(nMom);
-	gr_minOct[iNuclei][ipid][iXsec] = new TGraphErrors(nMom);
-	gr_maxOct[iNuclei][ipid][iXsec] = new TGraphErrors(nMom);
-	gr_shadeOct[iNuclei][ipid][iXsec] = new TGraphErrors(2*nMom);
-	
-	gr_minOct[iNuclei][ipid][iXsec]->SetLineColor(kGreen+2);
-	gr_maxOct[iNuclei][ipid][iXsec]->SetLineColor(kGreen+2);
-	
+	for(Int_t iType = 0; iType<nXsecs; iType++){
+	  
+	  char *title = Form("%s_%s_%s",
+			     Nuclei[iNuclei].Data(),
+			     pionType[ipid].Data(),
+			     xsName[iType].Data());
+	  
+	  gr_bestfitOct[iNuclei][ipid][iType] = (TGraphErrors*)fin->Get(Form("gr_bestfitOct_%s",title));
+	  gr_minOct[iNuclei][ipid][iType] = (TGraphErrors*)fin->Get(Form("gr_minOct_%s",title));
+	  gr_maxOct[iNuclei][ipid][iType] = (TGraphErrors*)fin->Get(Form("gr_maxOct_%s",title));
+	  gr_shadeOct[iNuclei][ipid][iType] = (TGraphErrors*)fin->Get(Form("gr_shadeOct_%s",title));
+	  gr_shadeOctRatio[iNuclei][ipid][iType] = (TGraphErrors*)fin->Get(Form("gr_shadeOctRatio_%s",title));
+	  
+	}
       }
     }
   }
@@ -138,11 +202,10 @@ int main(int argc, char* argv[]){
   
   // How many valid throws to do?
   // Note: Throws outside the grid are not counted
-  Int_t nthrows = 1000;
   Int_t nOutside = 0;
   Int_t tt = 0;
   
-  while(tt < nthrows){
+  while(tt < nThrows){
     
     std::cout<< "Throw # " << tt << std::endl;
     stopwatch.Start();
@@ -247,108 +310,111 @@ int main(int argc, char* argv[]){
     std::cout << "Took " << stopwatch.RealTime() << " seconds." << std::endl;
   
   }
+  if(nThrows > 0){
   
-  std::cout << nOutside << " throws outside the grid." << std::endl;
-  
-  // Fit PDFs and fill TGraphs with  \pm 1-\sigma envelopes
-  // Also calculate  (nom-data)/sqrt(th*th + exp*exp) for error inflation
-  TH1F *mcDataCompatibility = new TH1F("mcDataCompatibility",
-				       "Data-MC compatibility;(Best fit - Data)/#delta_{Best fit};Numer of Data points"
-				       ,26,-5.0,5.0);
-
-  Int_t PointsOutside = 0;
-
-  for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
-      
-    for(Int_t ipid = 0; ipid<2; ipid++){
+    std::cout << nOutside << " throws outside the grid." << std::endl;
     
-      std::vector<Double_t> allMoms = aInterpolatedCrossSection[iNuclei][ipid]->GetAllMoms();
-      Int_t nMom = aInterpolatedCrossSection[iNuclei][ipid]->GetNumberMomenta();
+    // Fit PDFs and fill TGraphs with  \pm 1-\sigma envelopes
+    // Also calculate  (nom-data)/sqrt(th*th + exp*exp) for error inflation
+    TH1F *mcDataCompatibility = new TH1F("mcDataCompatibility",
+					 "Data-MC compatibility;(Best fit - Data)/#delta_{Best fit};Numer of Data points"
+				       ,26,-5.0,5.0);
+    
+    Int_t PointsOutside = 0;
+    
+    for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
       
-      for(Int_t iType = 0; iType<nXsecs; iType++){
+      for(Int_t ipid = 0; ipid<2; ipid++){
+    
+	std::vector<Double_t> allMoms = aInterpolatedCrossSection[iNuclei][ipid]->GetAllMoms();
+	Int_t nMom = aInterpolatedCrossSection[iNuclei][ipid]->GetNumberMomenta();
 	
-	for(Int_t i = 0; i < nMom; i++){
+	for(Int_t iType = 0; iType<nXsecs; iType++){
 	  
-	  // Fit PDF to Gaussian
-	  xsPDFs[iNuclei][ipid][iType][i]->Fit("gaus","Q");
-	  
-	  // Store them and print them right away
-	  char *title = Form("PDF_%s_%s_%s_%.2f_MeV",
-			     Nuclei[iNuclei].Data(),
-			     pionType[ipid].Data(),
-			     xsName[iType].Data(),
-			     allMoms[i]);
-	  xsPDFCanvas[iNuclei][ipid][iType][i] = new TCanvas(title,title);
-	  xsPDFCanvas[iNuclei][ipid][iType][i]->cd();
-	  xsPDFs[iNuclei][ipid][iType][i]->Draw();
-	  fOut->cd();
-	  xsPDFs[iNuclei][ipid][iType][i]->Write();
-	  //xsPDFCanvas[iNuclei][ipid][iType][i]->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/pdf_%s.png",argv[1],title));
-	  //xsPDFCanvas[iNuclei][ipid][iType][i]->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/pdf_%s.eps",argv[1],title));
-
-	  // Get mean and sigma
-	  Double_t mean = xsPDFs[iNuclei][ipid][iType][i]->GetFunction("gaus")->GetParameter(1);
-	  Double_t sigma = xsPDFs[iNuclei][ipid][iType][i]->GetFunction("gaus")->GetParameter(2);
-	  Double_t bestfit = gr_bestfitOct[iNuclei][ipid][iType]->Eval(allMoms[i]);
-	  std::cout << "Bestfit: " << bestfit << " Mean: " << mean << " sigma: " << sigma << std::endl;
-
-	  // Just check that the mean of the PDF is indeed close to the best fit
-	  if(TMath::Abs(bestfit-mean)/bestfit > 0.05)
-	    std::cout << "Warning more than 5% difference" << std::endl;
-
-	  // Set envelopes
-	  gr_minOct[iNuclei][ipid][iType]->SetPoint(i,allMoms[i],mean-sigma);
-	  gr_maxOct[iNuclei][ipid][iType]->SetPoint(i,allMoms[i],mean+sigma);
-      
-	  // Loop over datasets to calculate (nom-data)/sqrt(th*th + exp*exp)
-	  // for each data point that matches this PDF
-	  for (Int_t dataset = 0; dataset < (Int_t)AllDataSets.size(); dataset++){
+	  for(Int_t i = 0; i < nMom; i++){
 	    
-	    // Loop over points
-	    for(Int_t point =  0; point < AllDataSets[dataset].GetNumberOfDataPoints(); point++){
+	    // Fit PDF to Gaussian
+	    xsPDFs[iNuclei][ipid][iType][i]->Fit("gaus","Q");
+	    
+	    // Store them and print them right away
+	    char *title = Form("PDF_%s_%s_%s_%.2f_MeV",
+			       Nuclei[iNuclei].Data(),
+			       pionType[ipid].Data(),
+			       xsName[iType].Data(),
+			       allMoms[i]);
+	    xsPDFCanvas[iNuclei][ipid][iType][i] = new TCanvas(title,title);
+	    xsPDFCanvas[iNuclei][ipid][iType][i]->cd();
+	    xsPDFs[iNuclei][ipid][iType][i]->Draw();
+	    fOut->cd();
+	    xsPDFs[iNuclei][ipid][iType][i]->Write();
+	    //xsPDFCanvas[iNuclei][ipid][iType][i]->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/pdf_%s.png",inputFile.Data(),title));
+	    //xsPDFCanvas[iNuclei][ipid][iType][i]->SaveAs(Form("/home/elder/share/tmp/octave_xsec/%s/pdf_%s.eps",inputFile.Data(),title));
+	    
+	    // Get mean and sigma
+	    Double_t mean = xsPDFs[iNuclei][ipid][iType][i]->GetFunction("gaus")->GetParameter(1);
+	    Double_t sigma = xsPDFs[iNuclei][ipid][iType][i]->GetFunction("gaus")->GetParameter(2);
+	    Double_t bestfit = gr_bestfitOct[iNuclei][ipid][iType]->Eval(allMoms[i]);
+	    std::cout << "Bestfit: " << bestfit << " Mean: " << mean << " sigma: " << sigma << std::endl;
+
+	    // Just check that the mean of the PDF is indeed close to the best fit
+	    if(TMath::Abs(bestfit-mean)/bestfit > 0.05)
+	      std::cout << "Warning more than 5% difference" << std::endl;
+	    
+	    // Set envelopes
+	    gr_minOct[iNuclei][ipid][iType]->SetPoint(i,allMoms[i],mean-sigma);
+	    gr_maxOct[iNuclei][ipid][iType]->SetPoint(i,allMoms[i],mean+sigma);
+	    
+	    // Loop over datasets to calculate (nom-data)/sqrt(th*th + exp*exp)
+	    // for each data point that matches this PDF
+	    for (Int_t dataset = 0; dataset < (Int_t)AllDataSets.size(); dataset++){
 	      
-	      // Check if matches
-	      if(AllDataSets[dataset].GetNucleus() == NucleiA[iNuclei] &&
-		 AllDataSets[dataset].GetPionType() == pids[ipid] &&
-		 AllDataSets[dataset].GetIntrType() == (iType+1) &&
-		 TMath::Abs(AllDataSets[dataset].GetMomVector()[point] - allMoms[i]) < 0.1){
-		
-		
-		Double_t comparison = (mean - AllDataSets[dataset].GetXsecVector()[point]) / TMath::Sqrt(sigma*sigma);// + AllDataSets[dataset].GetXsecErrorVector()[point] * AllDataSets[dataset].GetXsecErrorVector()[point]);
-		mcDataCompatibility->Fill(comparison);
-		Bool_t outside = false;
-		if(TMath::Abs(AllDataSets[dataset].GetXsecVector()[point] - mean) > sigma){
-		  PointsOutside++;
-		  outside = true;
+	      // Loop over points
+	      for(Int_t point =  0; point < AllDataSets[dataset].GetNumberOfDataPoints(); point++){
+	      
+		// Check if matches
+		if(AllDataSets[dataset].GetNucleus() == NucleiA[iNuclei] &&
+		   AllDataSets[dataset].GetPionType() == pids[ipid] &&
+		   AllDataSets[dataset].GetIntrType() == (iType+1) &&
+		   TMath::Abs(AllDataSets[dataset].GetMomVector()[point] - allMoms[i]) < 0.1){
+		  
+		  
+		  Double_t comparison = (mean - AllDataSets[dataset].GetXsecVector()[point]) / TMath::Sqrt(sigma*sigma);// + AllDataSets[dataset].GetXsecErrorVector()[point] * AllDataSets[dataset].GetXsecErrorVector()[point]);
+		  mcDataCompatibility->Fill(comparison);
+		  Bool_t outside = false;
+		  if(TMath::Abs(AllDataSets[dataset].GetXsecVector()[point] - mean) > sigma){
+		    PointsOutside++;
+		    outside = true;
+		  }
+		  printf("A: %d p: %d int: %d mom: %.2f xsec: %.2f err: %.2f mean: %.2f sigma: %.2f comp :%.4f outside %d\n",
+			 AllDataSets[dataset].GetNucleus(),
+			 AllDataSets[dataset].GetPionType(),
+			 AllDataSets[dataset].GetIntrType(),
+			 AllDataSets[dataset].GetMomVector()[point],
+			 AllDataSets[dataset].GetXsecVector()[point],
+			 AllDataSets[dataset].GetXsecErrorVector()[point],
+			 mean, sigma, comparison,outside);
+		  
 		}
-		printf("A: %d p: %d int: %d mom: %.2f xsec: %.2f err: %.2f mean: %.2f sigma: %.2f comp :%.4f outside %d\n",
-		       AllDataSets[dataset].GetNucleus(),
-		       AllDataSets[dataset].GetPionType(),
-		       AllDataSets[dataset].GetIntrType(),
-		       AllDataSets[dataset].GetMomVector()[point],
-		       AllDataSets[dataset].GetXsecVector()[point],
-		       AllDataSets[dataset].GetXsecErrorVector()[point],
-		       mean, sigma, comparison,outside);
-		
 	      }
 	    }
 	  }
 	}
       }
     }
+
+    std::cout << "------> Data points outside envelope: " << PointsOutside << std::endl;
+
+    TCanvas *c_mcDataCompatibility = new TCanvas();
+    c_mcDataCompatibility->cd();
+    mcDataCompatibility->Draw();
+    // c_mcDataCompatibility->SaveAs(Form("%s/%s/mcDataCompatibility.png",outdir.Data(),inputFile.Data()));
+    // c_mcDataCompatibility->SaveAs(Form("%s/%s/mcDataCompatibility.eps",outdir.Data(),inputFile.Data()));
+    c_mcDataCompatibility->SaveAs(Form("%s/%s/mcDataCompatibility.pdf",outdir.Data(),inputFile.Data()));
+    
+    fOut->cd();
+    mcDataCompatibility->Write();
   }
-
-  std::cout << "------> Data points outside envelope: " << PointsOutside << std::endl;
-
-  TCanvas *c_mcDataCompatibility = new TCanvas();
-  c_mcDataCompatibility->cd();
-  mcDataCompatibility->Draw();
-  c_mcDataCompatibility->SaveAs(Form("%s/%s/mcDataCompatibility.png",outdir.Data(),argv[1]));
-  c_mcDataCompatibility->SaveAs(Form("%s/%s/mcDataCompatibility.eps",outdir.Data(),argv[1]));
-
-  fOut->cd();
-  mcDataCompatibility->Write();
-
+  
   ////////////////////////////////////////////////////
   // This is the main plotting part of this executable
   ////////////////////////////////////////////////////
@@ -359,28 +425,32 @@ int main(int argc, char* argv[]){
   Int_t counter = 0;
 
   // Load model predictions from other generators
-  ModelPrediction::ModelPrediction geant4("geant4_xs.root");
-  geant4.SetLineColor(kBlack);
+
+  ModelPrediction *geant4 = new ModelPrediction("geant4_xs.root");
+  geant4->SetLineColor(kGray);
   
-  ModelPrediction::ModelPrediction genie_hA("genie_hA_xs.root");
-  genie_hA.SetGeVtoMeV();
-  genie_hA.SetLineColor(kRed);
+  ModelPrediction *genie_hA = new ModelPrediction("genie_2_12_4_hA_normalized.root");
+  genie_hA->SetGeVtoMeV();
+  genie_hA->SetLineColor(kOrange+2);
   
-  ModelPrediction::ModelPrediction genie_hA2014("genie_hA2014_xs.root");
-  genie_hA2014.SetGeVtoMeV();
-  genie_hA2014.SetLineColor(kBlue);
+  ModelPrediction *genie_hA2014 = new ModelPrediction("genie_2_12_4_hA2014_normalized.root");
+  genie_hA2014->SetGeVtoMeV();
+  genie_hA2014->SetLineColor(kBlue+2);
+
+  ModelPrediction *genie_hN2015 = new ModelPrediction("genie_2_12_4_hN2015_normalized.root");
+  genie_hN2015->SetGeVtoMeV();
+  genie_hN2015->SetLineColor(kYellow+1);
   
-  ModelPrediction::ModelPrediction genie_hN2015("genie_hN2015.root");
-  genie_hN2015.SetGeVtoMeV();
-  genie_hN2015.SetLineColor(kYellow+1);
-  
-  ModelPrediction::ModelPrediction nuwro("nuwro_scattering_xs.root");
-  nuwro.SetGeVtoMeV();
-  nuwro.SetLineColor(kGreen+2);
-  
-  ModelPrediction::ModelPrediction fluka("FLUKA_pipC.root");
-  fluka.SetGeVtoMeV();
-  fluka.SetLineColor(kCyan);//Orange+10);
+  ModelPrediction *nuwro = new ModelPrediction("nuwro_17.01.1_scat_lfg_normalized.root");
+  nuwro->SetGeVtoMeV();
+  nuwro->SetLineColor(kGreen+2);
+
+  ModelPrediction *fluka = new ModelPrediction("FLUKA_pipC.root");
+  fluka->SetGeVtoMeV();
+  fluka->SetLineColor(kCyan);//Orange+10);
+
+  ModelPrediction *gibuu = new ModelPrediction("gibuu_xs.root");
+  gibuu->SetLineColor(kMagenta);
     
   for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
   
@@ -423,9 +493,9 @@ int main(int argc, char* argv[]){
 	//merged->SetLineWidth(2);
 	merged->Sort();	
 
-	c_reac[iNuclei][ipid][iType]= new TCanvas(Form("%s_%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()),Form("%s-%s %s",pionLatex[ipid].Data(),Nuclei[iNuclei].Data(),iTypeString[iType].Data()));
+	c_reac[iNuclei][ipid][iType]= new TCanvas(Form("%s_%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()),Form("%s-%s %s",pionLatex[ipid].Data(),Nuclei[iNuclei].Data(),iTypeString[iType].Data()),800,600);
 	const char* hTemplateTitle = Form("%s %s %s",pionLatex[ipid].Data(),NucleiFull[iNuclei].Data(),iTypeString3[iType].Data());
-	TH1F *hTemplate = new TH1F(hTemplateTitle,Form("%s;Momentum [MeV/c];#sigma [mb]",hTemplateTitle),10,0,2000);
+	TH1F *hTemplate = new TH1F(hTemplateTitle,Form("%s;Momentum [MeV/c];#sigma [mb]",hTemplateTitle),10,0,500);
 	
 	TN032Envelopes *tn032Envel = new TN032Envelopes (Nuclei[iNuclei],pionCode[ipid],iTypeString[iType]);
 
@@ -444,16 +514,6 @@ int main(int argc, char* argv[]){
 	  tn032Envel->GetCrossSectionMax()->Draw("Csame");
 	}
 	
-	if(drawModels){
-	  tn032Envel->GetCrossSectionNominal()->Draw("Csame");
-	  geant4.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hA.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hA2014.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hN2015.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  nuwro.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  fluka.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	}
-
 	//hTrue[iType]->Draw("samehist");
 	
 	//gr_bestfit[iNuclei][ipid][iType]->Draw("Csame");
@@ -461,16 +521,33 @@ int main(int argc, char* argv[]){
 	// Create shade from the min and max histos
 	gr_shadeOct[iNuclei][ipid][iType] = FSIFitterUtils::MergeGraphsIntoEnvelope(gr_minOct[iNuclei][ipid][iType],gr_maxOct[iNuclei][ipid][iType]);
 	gr_shadeOct[iNuclei][ipid][iType]->SetFillColor(kRed+1);
-	//gr_shadeOct[iNuclei][ipid][iType]->SetFillStyle(3344);
 	gr_shadeOct[iNuclei][ipid][iType]->Draw("fsame");
 	gr_bestfitOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
-	// gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
+	// gr_maxOct[iNuclei][ipid][iType]->Drawme");
 
+	if(drawModels){
+	  geant4->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  genie_hA->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  genie_hA2014->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  genie_hN2015->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  nuwro->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  fluka->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  gibuu->GetCrossSectionGraph(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Csame");
+	}
+	
 	merged->Draw("Psame");
 
-	c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s/%s/%s_%s_%s.png",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()));
-	c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s/%s/%s_%s_%s.eps",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()));
+	char *title = Form("%s/%s/%s_%s_%s",
+		     outdir.Data(),
+		     inputFile.Data(),
+		     Nuclei[iNuclei].Data(),
+		     pionType[ipid].Data(),
+		     iTypeString[iType].Data());
+	
+	// c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s.png",title));
+	// c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s.eps",title));
+	c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s.pdf",title));
 
 	// Draw composite 'c_all' histogram
 	c_all[iNuclei][ipid]->cd(iType+1);
@@ -482,22 +559,22 @@ int main(int argc, char* argv[]){
 	  tn032Envel->GetCrossSectionMax()->Draw("Csame");
 	}
 	
-	if(drawModels){
-	  tn032Envel->GetCrossSectionNominal()->Draw("Csame");
-	  geant4.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hA.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hA2014.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hN2015.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  nuwro.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  fluka.GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	}
-
 	//hTrue[iType]->Draw("samehist");
 
 	gr_shadeOct[iNuclei][ipid][iType]->Draw("fsame");
 	gr_bestfitOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
+
+	if(drawModels){
+	  geant4->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  genie_hA->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  genie_hA2014->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  genie_hN2015->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  nuwro->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  fluka->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  gibuu->GetCrossSectionGraph(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Csame");
+	}
 
 	merged->Draw("Psame");
 
@@ -523,17 +600,17 @@ int main(int argc, char* argv[]){
 	hTemplateRatio->Draw();
 
 	// TGraphError with ratio band
-	TGraphErrors *gr_shadeOctRatio = new TGraphErrors(gr_shadeOct[iNuclei][ipid][iType]->GetN());
+	gr_shadeOctRatio[iNuclei][ipid][iType] = new TGraphErrors(gr_shadeOct[iNuclei][ipid][iType]->GetN());
 	Double_t *nxShade = gr_shadeOct[iNuclei][ipid][iType]->GetX();
         Double_t *nyShade = gr_shadeOct[iNuclei][ipid][iType]->GetY();
 	for(Int_t imom = 0; imom < gr_shadeOct[iNuclei][ipid][iType]->GetN(); imom++){
 	  
 	  Double_t bestfit = gr_bestfitOct[iNuclei][ipid][iType]->Eval(nxShade[imom]);
 	  Double_t ratio = nyShade[imom]/bestfit;
-	  gr_shadeOctRatio->SetPoint(imom,nxShade[imom],ratio);
+	  gr_shadeOctRatio[iNuclei][ipid][iType]->SetPoint(imom,nxShade[imom],ratio);
 	}
-	gr_shadeOctRatio->SetFillColor(kRed+1);
-	gr_shadeOctRatio->Draw("fsame");
+	gr_shadeOctRatio[iNuclei][ipid][iType]->SetFillColor(kRed+1);
+	gr_shadeOctRatio[iNuclei][ipid][iType]->Draw("fsame");
 	
 	// TGraphErrors with ratio of data points to best fit
 	TGraphErrors *merged_ratio = new TGraphErrors(merged->GetN());
@@ -562,16 +639,16 @@ int main(int argc, char* argv[]){
 
 	//Store envelopes to files here
 	fOut->cd();
-	char *title = Form("%s_%s_%s",
-			   Nuclei[iNuclei].Data(),
-			   pionType[ipid].Data(),
-			   xsName[iType].Data());
-
+	title = Form("%s_%s_%s",
+		     Nuclei[iNuclei].Data(),
+		     pionType[ipid].Data(),
+		     xsName[iType].Data());
+	
 	gr_bestfitOct[iNuclei][ipid][iType]->Write(Form("gr_bestfitOct_%s",title));
         gr_minOct[iNuclei][ipid][iType]->Write(Form("gr_minOct_%s",title));
         gr_maxOct[iNuclei][ipid][iType]->Write(Form("gr_maxOct_%s",title));
         gr_shadeOct[iNuclei][ipid][iType]->Write(Form("gr_shadeOct_%s",title));
-	gr_shadeOctRatio->Write(Form("gr_shadeOctRatio_%s",title));
+	gr_shadeOctRatio[iNuclei][ipid][iType]->Write(Form("gr_shadeOctRatio_%s",title));
 	merged->Write(Form("data_%s",title));
 	merged_ratio->Write(Form("dataRatio_%s",title));
 	delete collection;	  
@@ -593,18 +670,20 @@ int main(int argc, char* argv[]){
       if(drawModels){
 	// Draw box with legend
 	if(drawModels){
-	  pt->AddText("Geant4 Bertini");
-	  pt->GetLineWith("Geant4")->SetTextColor(kBlack);
-	  pt->AddText("GENIE hA");
-	  pt->GetLineWith("GENIE hA")->SetTextColor(kRed);
-	  pt->AddText("GENIE hA2014");
-	  pt->GetLineWith("2014")->SetTextColor(kBlue);
-	  pt->AddText("GENIE hN2015");
+	  pt->AddText("Geant4 Bertini (4.9.4)");
+	  pt->GetLineWith("Geant4")->SetTextColor(kGray);
+	  pt->AddText("GENIE hA (2.12.4)");
+	  pt->GetLineWith("GENIE hA")->SetTextColor(kOrange+2);
+	  pt->AddText("GENIE hA2014 (2.12.4)");
+	  pt->GetLineWith("2014")->SetTextColor(kBlue+2);
+	  pt->AddText("GENIE hN2015 (2.12.4)");
 	  pt->GetLineWith("2015")->SetTextColor(kYellow+1);
-	  pt->AddText("NuWro");
+	  pt->AddText("NuWro (17.01.1)");
 	  pt->GetLineWith("NuWro")->SetTextColor(kGreen+2);
-	  pt->AddText("FLUKA");
+	  pt->AddText("FLUKA (2011.2c.5)");
 	  pt->GetLineWith("FLUKA")->SetTextColor(kCyan);//+10);
+	  pt->AddText("GiBUU (Phys. Rep. 512 (2012) 1-124)");
+	  pt->GetLineWith("GiBUU")->SetTextColor(kMagenta);
 	}
 
 	c_all[iNuclei][ipid]->cd(6);
@@ -612,43 +691,56 @@ int main(int argc, char* argv[]){
       }
       
       fOut->cd();
-      c_all[iNuclei][ipid]->Write();
-      c_all[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all.png",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
-      c_all[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all.eps",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
 
-      c_all_ratio[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all_ratio.png",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
-      c_all_ratio[iNuclei][ipid]->SaveAs(Form("%s/%s/%s_%s_all_ratio.eps",outdir.Data(),argv[1],Nuclei[iNuclei].Data(),pionType[ipid].Data()));
+      char *title = Form("%s/%s/%s_%s_all",
+			 outdir.Data(),
+			 inputFile.Data(),
+			 Nuclei[iNuclei].Data(),
+			 pionType[ipid].Data());
+      
+      c_all[iNuclei][ipid]->Write();
+      // c_all[iNuclei][ipid]->SaveAs(Form("%s.png",title));
+      // c_all[iNuclei][ipid]->SaveAs(Form("%s.eps",title));
+      c_all[iNuclei][ipid]->SaveAs(Form("%s.pdf",title));
+
+      // c_all_ratio[iNuclei][ipid]->SaveAs(Form("%s_ratio.png",title));
+      // c_all_ratio[iNuclei][ipid]->SaveAs(Form("%s_ratio.eps",title));
+      c_all_ratio[iNuclei][ipid]->SaveAs(Form("%s_ratio.pdf",title));
 
     }
   }
   
   std::cout << "Total numer of data points plotted: " << counter << std::endl;
   
+
+  if(nThrows > 0){
   
-  // Draw and store throw histograms
-  TCanvas *c_throws = new TCanvas("c_throws","c_throws",2400,1200);
-  c_throws->Divide(3,2);
-  for(Int_t j = 0; j<npar; j++){
-    c_throws->cd(j+1);
-    //gStyle->SetOptStat(0111);
-    gStyle->SetOptFit();
-    histoFSIThrows[j]->SetLineWidth(1);
-    histoFSIThrows[j]->Fit("gaus");
-    histoFSIThrowsUsed[j]->SetLineWidth(1);
-    histoFSIThrowsUsed[j]->SetLineColor(2);
-    histoFSIThrowsUsed[j]->Fit("gaus");
-    histoFSIThrows[j]->Draw();
-    histoFSIThrowsUsed[j]->Draw("same");
-    fOut->cd();
-    histoFSIThrows[j]->Write();
-    histoFSIThrowsUsed[j]->Write();
+    // Draw and store throw histograms
+    TCanvas *c_throws = new TCanvas("c_throws","c_throws",2400,1200);
+    c_throws->Divide(3,2);
+    for(Int_t j = 0; j<npar; j++){
+      c_throws->cd(j+1);
+      //gStyle->SetOptStat(0111);
+      gStyle->SetOptFit();
+      histoFSIThrows[j]->SetLineWidth(1);
+      histoFSIThrows[j]->Fit("gaus");
+      histoFSIThrowsUsed[j]->SetLineWidth(1);
+      histoFSIThrowsUsed[j]->SetLineColor(2);
+      histoFSIThrowsUsed[j]->Fit("gaus");
+      histoFSIThrows[j]->Draw();
+      histoFSIThrowsUsed[j]->Draw("same");
+      fOut->cd();
+      histoFSIThrows[j]->Write();
+      histoFSIThrowsUsed[j]->Write();
+    }
+    
+    // c_throws->SaveAs(Form("%s/%s/throws.png",outdir.Data(),inputFile.Data()));
+    // c_throws->SaveAs(Form("%s/%s/throws.eps",outdir.Data(),inputFile.Data()));
+    c_throws->SaveAs(Form("%s/%s/throws.pdf",outdir.Data(),inputFile.Data()));
+    
+    c_throws->Write();
   }
   
-  c_throws->SaveAs(Form("%s/%s/throws.png",outdir.Data(),argv[1]));
-  c_throws->SaveAs(Form("%s/%s/throws.eps",outdir.Data(),argv[1]));
-
-  c_throws->Write();
-
   fOut->Close();
 
   return 0;
