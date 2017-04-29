@@ -36,8 +36,8 @@ const std::vector<TString> iTypeString3 = {"Reactive","Quasi-Elastic","Absorptio
 
 const std::vector<Int_t> NucleiA = {6,8,13,26,29,82};
 const std::vector<TString> Nuclei = {"c","o","al","fe","cu","pb"};
-const std::vector<TString> Nuclei2 = {"c12","o","al","fe","cu","pb"};
-const std::vector<TString> NucleiFull = {"{}^{12}_{6}C","{}^{16}_{8}O","{}^{27}_{13}Al","{}^{56}_{26}Fe","{}^{63}_{29}Cu","{}^{207}_{82}Pb"};
+const std::vector<TString> Nuclei2 = {"c12","o16","al27","fe56","cu63","pb208"};
+const std::vector<TString> NucleiFull = {"{}^{12}_{6}C","{}^{16}_{8}O","{}^{27}_{13}Al","{}^{56}_{26}Fe","{}^{63}_{29}Cu","{}^{208}_{82}Pb"};
 const std::vector<TString> pionLatex = {"#pi^{+}","#pi^{-}"};
 const std::vector<Int_t> pids = {211,-211};  
 const std::vector<TString> pionType = {"piP","piM"};
