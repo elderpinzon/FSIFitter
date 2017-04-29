@@ -451,6 +451,16 @@ int main(int argc, char* argv[]){
 
   ModelPrediction *gibuu = new ModelPrediction("gibuu_xs.root");
   gibuu->SetLineColor(kMagenta);
+  
+  // A vector of models to make things faster later
+  // will treat GiBUU separately since it comes in TGraphs
+  std::vector<ModelPrediction*> modelList;
+  modelList.push_back(geant4);
+  modelList.push_back(genie_hA);
+  modelList.push_back(genie_hA2014);
+  modelList.push_back(genie_hN2015);
+  modelList.push_back(nuwro);
+  modelList.push_back(fluka);
     
   for(Int_t iNuclei = 0; iNuclei < nNuclei; iNuclei++){
   
@@ -501,8 +511,13 @@ int main(int argc, char* argv[]){
 
 	// Get max scale for template histogram
 	Double_t max_scale = tn032Envel->GetMaxScale();
-	if(merged->GetN() > 0 && TMath::MaxElement(merged->GetN(),merged->GetY())*1.15 > max_scale)
-	  max_scale = TMath::MaxElement(merged->GetN(),merged->GetY());
+	if(merged->GetN() > 0 && TMath::MaxElement(merged->GetN(),merged->GetY())*1.25 > max_scale){
+	  max_scale = TMath::MaxElement(merged->GetN(),merged->GetY())*1.25;
+	  std::cout << TMath::MaxElement(merged->GetN(),merged->GetY())
+		    << " " << max_scale
+		    << std::endl;
+	}
+
 	
 	hTemplate->SetLineColor(0);
 	hTemplate->Draw();
@@ -527,12 +542,10 @@ int main(int argc, char* argv[]){
 	// gr_maxOct[iNuclei][ipid][iType]->Drawme");
 
 	if(drawModels){
-	  geant4->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hA->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hA2014->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hN2015->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  nuwro->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  fluka->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  for(std::vector<ModelPrediction*>::iterator it = modelList.begin(); it != modelList.end(); ++it) {
+	    
+	    (*it)->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  }
 	  gibuu->GetCrossSectionGraph(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Csame");
 	}
 	
@@ -567,12 +580,10 @@ int main(int argc, char* argv[]){
 	// gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
 
 	if(drawModels){
-	  geant4->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hA->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hA2014->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  genie_hN2015->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  nuwro->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
-	  fluka->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  for(std::vector<ModelPrediction*>::iterator it = modelList.begin(); it != modelList.end(); ++it) {
+	    
+	    (*it)->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Chistsame");
+	  }
 	  gibuu->GetCrossSectionGraph(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Draw("Csame");
 	}
 
@@ -612,6 +623,37 @@ int main(int argc, char* argv[]){
 	gr_shadeOctRatio[iNuclei][ipid][iType]->SetFillColor(kRed+1);
 	gr_shadeOctRatio[iNuclei][ipid][iType]->Draw("fsame");
 	
+	// Draw ratio of models
+	if(drawModels){
+	  
+	  // Loop through models and calculate ratios
+	  for(std::vector<ModelPrediction*>::iterator it = modelList.begin(); it != modelList.end(); ++it) {
+	    
+	    TH1D *ratio_model = (TH1D*)(*it)->GetCrossSection(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Clone();
+	    for(Int_t imom = 1; imom <= ratio_model->GetNbinsX(); imom++){
+	      
+	      Double_t bestfit = gr_bestfitOct[iNuclei][ipid][iType]->Eval(ratio_model->GetBinCenter(imom));
+	      Double_t ratio = ratio_model->GetBinContent(imom)/bestfit;
+	      ratio_model->SetBinContent(imom,ratio);
+	    }
+	    
+	    ratio_model->Draw("Chistsame");
+	  }
+
+	  // GiBUU is done seprately since it's a TGraph
+	  TGraph *gibuu_ratio = (TGraph*)gibuu->GetCrossSectionGraph(Nuclei2[iNuclei],pionType2[ipid],iTypeString2[iType])->Clone();
+	  Double_t *nxShade = gibuu_ratio->GetX();
+	  Double_t *nyShade = gibuu_ratio->GetY();
+	  for(Int_t imom = 0; imom < gibuu_ratio->GetN(); imom++){
+
+	    Double_t bestfit = gr_bestfitOct[iNuclei][ipid][iType]->Eval(nxShade[imom]);
+	    Double_t ratio = nyShade[imom]/bestfit;
+	    gibuu_ratio->SetPoint(imom,nxShade[imom],ratio);
+	  }
+	  gibuu_ratio->Draw("Csame");
+	  
+	}
+
 	// TGraphErrors with ratio of data points to best fit
 	TGraphErrors *merged_ratio = new TGraphErrors(merged->GetN());
 	merged_ratio->SetMarkerStyle(kCircle);
