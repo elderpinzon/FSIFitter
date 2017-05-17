@@ -1,7 +1,7 @@
-##Type: Reactive
+##Type: Inel
 ##Nuclei: Carbon
 ##Particle: piP
-##Reference: A. Saunders, et al. Reaction and total cross sections for low energy π+ and π− on isospin zero nuclei. Phys. Rev., Vol. C53, p. 1745, 1996
+##Reference: C. H. Q. Ingram, et al. Quasielastic scattering of pions from 160 at energies around the A(1232) resonance. Phys. Rev. C Vol. 27, 4. 1983
 ##Mom xsec error
 211.702 191 12
 268.456 259 17
