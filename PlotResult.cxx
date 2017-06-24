@@ -11,11 +11,14 @@
 Int_t nThrows = -1;
 TString inputFile = "";
 Bool_t drawModels = false;
+Int_t momMaxRange = 2000;
+Bool_t drawChannels = false;
+Bool_t drawTN032Envelopes = false;
 
 // Print the cmd line syntax
 void Usage(){
   std::cout << "Cmd line syntax should be:" << std::endl;
-  std::cout << "./PlotResult.exe -i inputFile (OPTIONAL -n throws -o outputFile)" << std::endl;
+  std::cout << "./PlotResult.exe -i inputFile (OPTIONAL -n throws -o outputFile -r momMaxRange -c drawChannels -m (models) -t (TN032))" << std::endl;
 }
 
 //***********************************************************************************
@@ -32,6 +35,9 @@ void ParseArgs(int argc, char **argv){
     else if(std::string(argv[i]) == "-n") nThrows = atoi(argv[i+1]);
     else if(std::string(argv[i]) == "-i") inputFile = argv[i+1];
     else if(std::string(argv[i]) == "-m") drawModels = atoi(argv[i+1]);
+    else if(std::string(argv[i]) == "-r") momMaxRange = atoi(argv[i+1]);
+    else if(std::string(argv[i]) == "-t") drawTN032Envelopes = atoi(argv[i+1]);
+    else if(std::string(argv[i]) == "-c") drawChannels = atoi(argv[i+1]);
     else {  
       std::cout << "Invalid argument:" << argv[i] << " "<< argv[i+1] << std::endl;
       Usage();
@@ -48,8 +54,6 @@ int main(int argc, char* argv[]){
   
   TString outdir = "/home/elder/share/tmp/octave_xsec";
   
-  bool drawTN032Envelopes = true;//false;
-
   TFile *fin = new TFile(inputFile,"OPEN");
 
   // If doing throws, get a covariance matrix
@@ -204,7 +208,7 @@ int main(int argc, char* argv[]){
   // Note: Throws outside the grid are not counted
   Int_t nOutside = 0;
   Int_t tt = 0;
-  
+
   while(tt < nThrows){
     
     std::cout<< "Throw # " << tt << std::endl;
@@ -426,7 +430,8 @@ int main(int argc, char* argv[]){
 
   // Load model predictions from other generators
 
-  ModelPrediction *geant4 = new ModelPrediction("geant4_xs.root");
+  ModelPrediction *geant4 = new ModelPrediction("geant4_9_1_QGSP_BERT_normalized.root");
+  geant4->SetGeVtoMeV();
   geant4->SetLineColor(kGray);
   
   ModelPrediction *genie_hA = new ModelPrediction("genie_2_12_4_hA_normalized.root");
@@ -445,7 +450,7 @@ int main(int argc, char* argv[]){
   nuwro->SetGeVtoMeV();
   nuwro->SetLineColor(kGreen+2);
 
-  ModelPrediction *fluka = new ModelPrediction("FLUKA_pipC.root");
+  ModelPrediction *fluka = new ModelPrediction("Fluka2011.2c.6_xs.root");
   fluka->SetGeVtoMeV();
   fluka->SetLineColor(kCyan);//Orange+10);
 
@@ -466,7 +471,7 @@ int main(int argc, char* argv[]){
   
     for(Int_t ipid = 0; ipid<2; ipid++){
       
-      c_all[iNuclei][ipid] = new TCanvas(Form("%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data()),Form("%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data()),2400,1200);
+      c_all[iNuclei][ipid] = new TCanvas(Form("%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data()),Form("%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data()),1200,600);//,2400,1200);
       c_all[iNuclei][ipid]->Divide(3,2);
 
       c_all_ratio[iNuclei][ipid] = new TCanvas(Form("%s_%s_ratio",Nuclei[iNuclei].Data(),pionType[ipid].Data()),Form("%s_%s_ratio",Nuclei[iNuclei].Data(),pionType[ipid].Data()),1000,1600);
@@ -499,13 +504,13 @@ int main(int argc, char* argv[]){
 	merged = FSIFitterUtils::MergeGraphs(collection);
 	//merged->SetMarkerStyle(kFullCircle);
 	merged->SetMarkerStyle(kCircle);
-	merged->SetMarkerSize(1.6);
+	merged->SetMarkerSize(0.8);
 	//merged->SetLineWidth(2);
-	merged->Sort();	
+	merged->Sort();
 
-	c_reac[iNuclei][ipid][iType]= new TCanvas(Form("%s_%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()),Form("%s-%s %s",pionLatex[ipid].Data(),Nuclei[iNuclei].Data(),iTypeString[iType].Data()),800,600);
+	c_reac[iNuclei][ipid][iType]= new TCanvas(Form("%s_%s_%s",Nuclei[iNuclei].Data(),pionType[ipid].Data(),iTypeString[iType].Data()),Form("%s-%s %s",pionLatex[ipid].Data(),Nuclei[iNuclei].Data(),iTypeString[iType].Data()));//,800,600);
 	const char* hTemplateTitle = Form("%s %s %s",pionLatex[ipid].Data(),NucleiFull[iNuclei].Data(),iTypeString3[iType].Data());
-	TH1F *hTemplate = new TH1F(hTemplateTitle,Form("%s;Momentum [MeV/c];#sigma [mb]",hTemplateTitle),10,0,500);
+	TH1F *hTemplate = new TH1F(hTemplateTitle,Form("%s;Momentum [MeV/c];#sigma [mb]",hTemplateTitle),10,0,momMaxRange);
 	
 	TN032Envelopes *tn032Envel = new TN032Envelopes (Nuclei[iNuclei],pionCode[ipid],iTypeString[iType]);
 
@@ -537,9 +542,14 @@ int main(int argc, char* argv[]){
 	gr_shadeOct[iNuclei][ipid][iType] = FSIFitterUtils::MergeGraphsIntoEnvelope(gr_minOct[iNuclei][ipid][iType],gr_maxOct[iNuclei][ipid][iType]);
 	gr_shadeOct[iNuclei][ipid][iType]->SetFillColor(kRed+1);
 	gr_shadeOct[iNuclei][ipid][iType]->Draw("fsame");
+	if(!drawChannels) gr_bestfitOct[iNuclei][ipid][iType]->SetLineWidth(1);
 	gr_bestfitOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_maxOct[iNuclei][ipid][iType]->Drawme");
+
+        if(drawTN032Envelopes){
+	  tn032Envel->GetCrossSectionNominal()->Draw("Csame");
+	}
 
 	if(drawModels){
 	  for(std::vector<ModelPrediction*>::iterator it = modelList.begin(); it != modelList.end(); ++it) {
@@ -557,7 +567,9 @@ int main(int argc, char* argv[]){
 		     Nuclei[iNuclei].Data(),
 		     pionType[ipid].Data(),
 		     iTypeString[iType].Data());
-	
+	if(drawModels)
+	  title = Form("%s_models",title);
+      
 	// c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s.png",title));
 	// c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s.eps",title));
 	c_reac[iNuclei][ipid][iType]->SaveAs(Form("%s.pdf",title));
@@ -575,9 +587,14 @@ int main(int argc, char* argv[]){
 	//hTrue[iType]->Draw("samehist");
 
 	gr_shadeOct[iNuclei][ipid][iType]->Draw("fsame");
+	if(!drawChannels) gr_bestfitOct[iNuclei][ipid][iType]->SetLineWidth(1);
 	gr_bestfitOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_minOct[iNuclei][ipid][iType]->Draw("Csame");
 	// gr_maxOct[iNuclei][ipid][iType]->Draw("Csame");
+
+        if(drawTN032Envelopes){
+	  tn032Envel->GetCrossSectionNominal()->Draw("Csame");
+	}
 
 	if(drawModels){
 	  for(std::vector<ModelPrediction*>::iterator it = modelList.begin(); it != modelList.end(); ++it) {
@@ -705,8 +722,9 @@ int main(int argc, char* argv[]){
       pt->GetLineWith("FSIFitter #pm")->SetTextColor(kRed+1);
 
       if(drawTN032Envelopes){
+	pt->AddText("TN-032 best fit (dashed)");
 	pt->AddText("TN-032 #pm1#sigma band");
-	pt->GetLineWith("TN-032")->SetTextColor(kAzure+2);
+	pt->GetLineWith("TN-032 #pm")->SetTextColor(kAzure+2);
       }
 
       if(drawModels){
@@ -722,16 +740,17 @@ int main(int argc, char* argv[]){
 	  pt->GetLineWith("2015")->SetTextColor(kYellow+1);
 	  pt->AddText("NuWro (17.01.1)");
 	  pt->GetLineWith("NuWro")->SetTextColor(kGreen+2);
-	  pt->AddText("FLUKA (2011.2c.5)");
+	  pt->AddText("FLUKA (2011.2c.6)");
 	  pt->GetLineWith("FLUKA")->SetTextColor(kCyan);//+10);
 	  pt->AddText("GiBUU (Phys. Rep. 512 (2012) 1-124)");
 	  pt->GetLineWith("GiBUU")->SetTextColor(kMagenta);
 	}
 
-	c_all[iNuclei][ipid]->cd(6);
-	pt->Draw();//"same");
       }
-      
+
+      c_all[iNuclei][ipid]->cd(6);
+      pt->Draw();//"same");
+
       fOut->cd();
 
       char *title = Form("%s/%s/%s_%s_all",
@@ -739,6 +758,9 @@ int main(int argc, char* argv[]){
 			 inputFile.Data(),
 			 Nuclei[iNuclei].Data(),
 			 pionType[ipid].Data());
+      
+      if(drawModels)
+	title = Form("%s_models",title);
       
       c_all[iNuclei][ipid]->Write();
       // c_all[iNuclei][ipid]->SaveAs(Form("%s.png",title));
